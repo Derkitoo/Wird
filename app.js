@@ -552,28 +552,50 @@ document.addEventListener('DOMContentLoaded', () => {
     if (quranContainer) {
       let touchStartX = 0;
       let touchStartY = 0;
+      let touchDeltaX = 0;
+      // null = undecided, true = horizontal swipe in progress, false = vertical scroll, let the browser handle it
+      let isHorizontalSwipe = null;
+      const MIN_SWIPE_DISTANCE = 50;
+      const DIRECTION_LOCK_THRESHOLD = 10;
 
       quranContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchDeltaX = 0;
+        isHorizontalSwipe = null;
       }, { passive: true });
 
-      quranContainer.addEventListener('touchend', (e) => {
-        const touchEndX = e.changedTouches[0].screenX;
-        const touchEndY = e.changedTouches[0].screenY;
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
+      // Non-passive: once we're confident the gesture is horizontal, we must
+      // preventDefault() here or the browser hijacks it as a vertical scroll
+      // (the <main> ancestor is scrollable) and touchend never reflects the swipe.
+      quranContainer.addEventListener('touchmove', (e) => {
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
 
-        const MIN_SWIPE_DISTANCE = 50;
-        // Ignore mostly-vertical gestures (scrolling)
-        if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY)) return;
-
-        if (deltaX > 0) {
-          goToNextPage();
-        } else {
-          goToPrevPage();
+        if (isHorizontalSwipe === null && (Math.abs(deltaX) > DIRECTION_LOCK_THRESHOLD || Math.abs(deltaY) > DIRECTION_LOCK_THRESHOLD)) {
+          isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
         }
-      }, { passive: true });
+
+        if (isHorizontalSwipe) {
+          e.preventDefault();
+          touchDeltaX = deltaX;
+        }
+      }, { passive: false });
+
+      const finishSwipe = () => {
+        if (isHorizontalSwipe && Math.abs(touchDeltaX) >= MIN_SWIPE_DISTANCE) {
+          if (touchDeltaX > 0) {
+            goToNextPage();
+          } else {
+            goToPrevPage();
+          }
+        }
+        isHorizontalSwipe = null;
+        touchDeltaX = 0;
+      };
+
+      quranContainer.addEventListener('touchend', finishSwipe, { passive: true });
+      quranContainer.addEventListener('touchcancel', finishSwipe, { passive: true });
     }
   }
 
