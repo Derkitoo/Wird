@@ -86,7 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
     lastViewedJuz: null,
     scrollToVerseOnLoad: null,
     currentPageIndex: 0,
-    pagesList: []
+    pagesList: [],
+    // Pages genuinely read (dwell-time confirmed), keyed by Juz number then page ordinal (1-based, matches "Page N/M" label)
+    readPages: {},
+    pageDwellTimer: null
   };
 
   // DOM Views
@@ -252,6 +255,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn("Failed to parse wird_last_viewed_juz", err);
   }
 
+  try {
+    const savedReadPages = localStorage.getItem('wird_read_pages');
+    if (savedReadPages) state.readPages = JSON.parse(savedReadPages);
+  } catch (err) {
+    console.warn("Failed to parse wird_read_pages", err);
+  }
+
   // Daily Reset check
   const todayDateStr = new Date().toISOString().split('T')[0];
   const lastActiveDate = localStorage.getItem('wird_last_active_date');
@@ -264,6 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
       isha: false
     };
     localStorage.setItem('wird_prayers_completed', JSON.stringify(state.prayersCompleted));
+    state.readPages = {};
+    localStorage.setItem('wird_read_pages', JSON.stringify(state.readPages));
     showToast("Nouveau jour 🌅", "Votre Wird quotidien a été réinitialisé pour aujourd'hui.");
   }
   localStorage.setItem('wird_last_active_date', todayDateStr);
@@ -513,9 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
           isha: false
         };
         localStorage.setItem('wird_prayers_completed', JSON.stringify(state.prayersCompleted));
+        state.readPages = {};
+        localStorage.setItem('wird_read_pages', JSON.stringify(state.readPages));
         localStorage.removeItem('wird_last_page');
         state.currentPageIndex = 0;
-        
+
         showToast("Juz Suivant ! 🏁", `Bienvenue dans le Juz ${state.selectedJuz}.`);
         
         updateProgress();
@@ -962,6 +976,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const activePageNum = pages[state.currentPageIndex];
     localStorage.setItem('wird_last_page', activePageNum);
     localStorage.setItem('wird_last_juz', state.selectedJuz);
+
+    // Any navigation (buttons, swipe, audio auto-advance) lands here and resets
+    // the dwell timer, so rapid page-flipping never counts as "read".
+    schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
 
     const pageItems = allVerses.filter(item => item.verse.page === activePageNum);
 
@@ -1757,13 +1775,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // View Routing - Bulletproof implementation with visual debug logging
   function switchView(viewId) {
     console.log("Attempting view switch to:", viewId);
-    
+
     const targetView = document.getElementById(`view-${viewId}`);
     if (!targetView) {
       console.error("CRITICAL: Target view not found in DOM:", `view-${viewId}`);
       return;
     }
-    
+
+    if (viewId !== 'reader') cancelPageDwellTracking();
+
     // Hide all view panels safely
     document.querySelectorAll('.view').forEach(el => {
       el.classList.remove('active');
@@ -1807,6 +1827,90 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const mainEl = document.querySelector('main');
     if (mainEl) mainEl.scrollTop = 0;
+  }
+
+  // Reading-based Wird tracking: a page only counts as "read" if the user stays
+  // on it at least PAGE_DWELL_MS — rapidly flipping through pages resets the
+  // timer on every navigation, so it never fires and nothing gets counted.
+  const PAGE_DWELL_MS = 4000;
+
+  function schedulePageDwellTracking(juz, pageOrdinal) {
+    if (state.pageDwellTimer) {
+      clearTimeout(state.pageDwellTimer);
+      state.pageDwellTimer = null;
+    }
+    if (state.readerMode !== 'read') return;
+    state.pageDwellTimer = setTimeout(() => {
+      state.pageDwellTimer = null;
+      const stillOnSamePage = state.currentView === 'reader' &&
+        state.readerMode === 'read' &&
+        state.selectedJuz === juz &&
+        (state.currentPageIndex + 1) === pageOrdinal;
+      if (stillOnSamePage) {
+        markPageAsRead(juz, pageOrdinal);
+      }
+    }, PAGE_DWELL_MS);
+  }
+
+  function cancelPageDwellTracking() {
+    if (state.pageDwellTimer) {
+      clearTimeout(state.pageDwellTimer);
+      state.pageDwellTimer = null;
+    }
+  }
+
+  function markPageAsRead(juz, pageOrdinal) {
+    if (!state.readPages[juz]) state.readPages[juz] = {};
+    if (state.readPages[juz][pageOrdinal]) return;
+    state.readPages[juz][pageOrdinal] = true;
+    localStorage.setItem('wird_read_pages', JSON.stringify(state.readPages));
+    if (juz === state.selectedJuz) {
+      autoCompletePrayersFromReadPages();
+    }
+  }
+
+  // Maps the Wird's per-prayer page plan (e.g. Fajr: 4 pages) onto the ordinal
+  // page numbers shown in the reader ("Page N/M"), in cumulative order.
+  function getPrayerPageRanges() {
+    const order = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+    const ranges = {};
+    let cursor = 1;
+    order.forEach(prayerId => {
+      const count = state.wirdPagePlan[prayerId] || 0;
+      const start = cursor;
+      const end = cursor + count - 1;
+      ranges[prayerId] = { start, end };
+      cursor = end + 1;
+    });
+    return ranges;
+  }
+
+  // Auto-completes prayer checkboxes once every page in their range has genuinely been read.
+  function autoCompletePrayersFromReadPages() {
+    const readSet = state.readPages[state.selectedJuz] || {};
+    const ranges = getPrayerPageRanges();
+    let anyChanged = false;
+
+    Object.keys(ranges).forEach(prayerId => {
+      if (state.prayersCompleted[prayerId]) return;
+      const { start, end } = ranges[prayerId];
+      if (end < start) return;
+      for (let p = start; p <= end; p++) {
+        if (!readSet[p]) return;
+      }
+      state.prayersCompleted[prayerId] = true;
+      anyChanged = true;
+      const card = document.querySelector(`.prayer-card[data-prayer="${prayerId}"]`);
+      if (card) {
+        card.classList.add('completed');
+        createConfetti(card);
+      }
+    });
+
+    if (anyChanged) {
+      updateProgress();
+      showToast("Wird mis à jour 📖", "Prière validée automatiquement grâce à votre lecture.");
+    }
   }
 
   // Calculate Wird progress
@@ -1975,6 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setReaderMode(mode) {
     state.readerMode = mode;
+    if (mode !== 'read') cancelPageDwellTracking();
     const readBtn = document.getElementById('switch-read');
     const memoBtn = document.getElementById('switch-memorize');
     
