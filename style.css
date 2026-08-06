@@ -4,11 +4,11 @@
   --bg-dark-radial: radial-gradient(circle at 50% 50%, #151b33 0%, #070913 100%);
   --bg-card: rgba(20, 26, 46, 0.6);
   --bg-input: rgba(10, 14, 26, 0.8);
-  --border-card: rgba(212, 175, 55, 0.15);
-  --border-active: rgba(212, 175, 55, 0.4);
+  --border-card: color-mix(in srgb, var(--primary) 15%, transparent);
+  --border-active: color-mix(in srgb, var(--primary) 40%, transparent);
   
   --primary: #D4AF37; /* Metallic Gold */
-  --primary-glow: rgba(212, 175, 55, 0.25);
+  --primary-glow: color-mix(in srgb, var(--primary) 25%, transparent);
   --emerald: #10B981; /* Spiritual Green */
   --emerald-glow: rgba(16, 185, 129, 0.3);
   --ruby: #EF4444;
@@ -34,7 +34,25 @@
   
   --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  --text-strong: var(--text-strong)FFF;
+  --page-bg: #070913;
 }
+
+[data-theme="light"] {
+  --bg-dark-radial: radial-gradient(circle at 50% 20%, #fdfbf8 0%, #f2efe9 100%);
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-input: rgba(255, 255, 255, 0.9);
+  --text-primary: #201e1d;
+  --text-secondary: #6b6560;
+  --text-muted: #9b9490;
+  --text-strong: #201e1d;
+  --page-bg: #f2efe9;
+}
+
+[data-palette="emerald"] { --primary: #0f9d63; }
+[data-palette="sapphire"] { --primary: #3B82F6; }
+[data-palette="amber"] { --primary: #d97706; }
 
 /* Reset & Base Styles */
 * {
@@ -46,7 +64,7 @@
 
 body {
   font-family: var(--font-ui);
-  background: #070913;
+  background: var(--page-bg);
   color: var(--text-primary);
   min-height: 100vh;
   display: flex;
@@ -77,8 +95,8 @@ body {
     height: 92vh;
     height: 92dvh;
     border-radius: var(--radius-xl);
-    border: 1px solid rgba(212, 175, 55, 0.25);
-    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(212, 175, 55, 0.08);
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px color-mix(in srgb, var(--primary) 8%, transparent);
   }
 }
 
@@ -175,7 +193,7 @@ main::-webkit-scrollbar {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #FFF 60%, var(--primary) 100%);
+  background: linear-gradient(135deg, var(--text-strong) 60%, var(--primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -246,7 +264,7 @@ main::-webkit-scrollbar {
 }
 
 .circular-progress .bg-circle {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: color-mix(in srgb, var(--text-strong) 5%, transparent);
 }
 
 .circular-progress .progress-bar {
@@ -262,7 +280,7 @@ main::-webkit-scrollbar {
   position: absolute;
   font-size: 18px;
   font-weight: 700;
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .progress-info h3 {
@@ -280,8 +298,8 @@ main::-webkit-scrollbar {
   font-size: 11px;
   font-weight: 600;
   padding: 4px 8px;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
   color: var(--primary);
   border-radius: 20px;
   margin-top: 8px;
@@ -318,7 +336,7 @@ main::-webkit-scrollbar {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid color-mix(in srgb, var(--text-strong) 15%, transparent);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -329,7 +347,7 @@ main::-webkit-scrollbar {
   width: 14px;
   height: 14px;
   fill: none;
-  stroke: #FFF;
+  stroke: var(--text-strong);
   stroke-width: 3px;
   opacity: 0;
   transition: var(--transition-smooth);
@@ -375,7 +393,7 @@ main::-webkit-scrollbar {
   position: relative;
   background: linear-gradient(180deg, rgba(20, 26, 46, 0.3) 0%, rgba(10, 14, 26, 0.6) 100%);
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 3%, transparent);
   margin-bottom: 20px;
   overflow: hidden;
 }
@@ -465,7 +483,7 @@ main::-webkit-scrollbar {
   line-height: 1.8;
   margin-bottom: 12px;
   direction: rtl;
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .ayah-translation {
@@ -491,7 +509,7 @@ main::-webkit-scrollbar {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 
 .btn-primary svg {
@@ -502,7 +520,7 @@ main::-webkit-scrollbar {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 /* Immersive Reader Views */
@@ -521,7 +539,7 @@ main::-webkit-scrollbar {
 .surah-info-title h2 {
   font-size: 20px;
   font-weight: 700;
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .surah-info-title p {
@@ -565,16 +583,16 @@ main::-webkit-scrollbar {
 .verse-block {
   padding: 16px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.01);
+  background: color-mix(in srgb, var(--text-strong) 1%, transparent);
   border: 1px solid transparent;
   transition: var(--transition-smooth);
   position: relative;
 }
 
 .verse-block.active-reciting {
-  background: rgba(212, 175, 55, 0.05);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
   border-color: var(--border-active);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.08);
+  box-shadow: 0 0 15px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .verse-header-row {
@@ -585,7 +603,7 @@ main::-webkit-scrollbar {
 }
 
 .verse-badge {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
   font-size: 10px;
   color: var(--text-secondary);
   padding: 2px 8px;
@@ -624,7 +642,7 @@ main::-webkit-scrollbar {
   line-height: 2.1;
   text-align: right;
   direction: rtl;
-  color: #FFF;
+  color: var(--text-strong);
   margin-bottom: 8px;
   user-select: none;
 }
@@ -635,7 +653,7 @@ main::-webkit-scrollbar {
   cursor: pointer;
   transition: var(--transition-smooth);
   position: relative;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-strong) 10%, transparent);
   padding: 0 2px;
 }
 
@@ -648,9 +666,9 @@ main::-webkit-scrollbar {
 }
 
 @keyframes pulseHidden {
-  0% { background-color: rgba(212, 175, 55, 0.2); }
-  50% { background-color: rgba(212, 175, 55, 0.35); }
-  100% { background-color: rgba(212, 175, 55, 0.2); }
+  0% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
+  50% { background-color: color-mix(in srgb, var(--primary) 35%, transparent); }
+  100% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
 }
 
 .verse-text-trans {
@@ -693,12 +711,12 @@ main::-webkit-scrollbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
 }
 
 .tafsir-header h3 {
   font-size: 18px;
-  color: #FFF;
+  color: var(--text-strong);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -707,7 +725,7 @@ main::-webkit-scrollbar {
 .tafsir-header h3 span {
   font-size: 13px;
   color: var(--primary);
-  background: rgba(212, 175, 55, 0.1);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
   padding: 2px 8px;
   border-radius: 12px;
 }
@@ -808,7 +826,7 @@ main::-webkit-scrollbar {
 .audio-title {
   font-size: 13px;
   font-weight: 600;
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .audio-subtitle {
@@ -860,7 +878,7 @@ main::-webkit-scrollbar {
 /* Memorization Interface Custom Styles */
 .hifz-progress-bar-container {
   height: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
   border-radius: 3px;
   margin-top: 10px;
   margin-bottom: 24px;
@@ -896,7 +914,7 @@ main::-webkit-scrollbar {
 }
 
 .btn-difficulty:hover {
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .btn-difficulty.hard {
@@ -941,7 +959,7 @@ main::-webkit-scrollbar {
   display: flex;
   gap: 12px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid color-mix(in srgb, var(--text-strong) 3%, transparent);
 }
 
 .activity-card:last-child {
@@ -980,7 +998,7 @@ main::-webkit-scrollbar {
 .activity-username {
   font-size: 14px;
   font-weight: 600;
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .activity-time {
@@ -1001,8 +1019,8 @@ main::-webkit-scrollbar {
 }
 
 .btn-action-small {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-strong) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
@@ -1016,7 +1034,7 @@ main::-webkit-scrollbar {
 }
 
 .btn-action-small:hover {
-  background: rgba(212, 175, 55, 0.1);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
   border-color: var(--border-active);
   color: var(--primary);
 }
@@ -1056,8 +1074,8 @@ main::-webkit-scrollbar {
 .btn-text-size {
   width: 28px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 8%, transparent);
   border-radius: 50%;
   color: var(--text-primary);
   font-size: 11px;
@@ -1094,7 +1112,7 @@ main::-webkit-scrollbar {
   display: flex;
   gap: 8px;
   margin-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
   padding-top: 10px;
   animation: fadeIn 0.3s ease-out;
 }
@@ -1102,7 +1120,7 @@ main::-webkit-scrollbar {
 .btn-srs {
   flex: 1;
   border: 1px solid var(--border-card);
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--text-strong) 2%, transparent);
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
@@ -1115,7 +1133,7 @@ main::-webkit-scrollbar {
 }
 
 .btn-srs:hover {
-  color: #FFF;
+  color: var(--text-strong);
 }
 
 .btn-srs-hard {
@@ -1147,26 +1165,26 @@ main::-webkit-scrollbar {
 
 /* Automatic Hiding Modes */
 .hifz-masked-word {
-  background: rgba(212, 175, 55, 0.15);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
   color: transparent !important;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: var(--transition-smooth);
   user-select: none;
   padding: 0 4px;
-  border-bottom: 1px dashed rgba(212, 175, 55, 0.4);
+  border-bottom: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
   display: inline-block;
 }
 
 .hifz-masked-word.revealed {
   background: transparent;
-  color: #FFF !important;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  color: var(--text-strong) !important;
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-strong) 10%, transparent);
 }
 
 .hifz-masked-full-wrapper {
   background: rgba(20, 26, 46, 0.4);
-  border: 1px dashed rgba(212, 175, 55, 0.25);
+  border: 1px dashed color-mix(in srgb, var(--primary) 25%, transparent);
   border-radius: var(--radius-md);
   padding: 14px;
   cursor: pointer;
@@ -1176,7 +1194,7 @@ main::-webkit-scrollbar {
 }
 
 .hifz-masked-full-wrapper:hover {
-  background: rgba(212, 175, 55, 0.05);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
   border-color: var(--primary);
 }
 
@@ -1195,7 +1213,7 @@ main::-webkit-scrollbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: var(--shadow-lg), 0 0 15px rgba(212, 175, 55, 0.15);
+  box-shadow: var(--shadow-lg), 0 0 15px color-mix(in srgb, var(--primary) 15%, transparent);
   pointer-events: auto;
   animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
              toastFadeOut 0.4s ease-in 3.5s forwards;
@@ -1207,7 +1225,7 @@ main::-webkit-scrollbar {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: rgba(212, 175, 55, 0.15);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1221,7 +1239,7 @@ main::-webkit-scrollbar {
 .push-toast-title {
   font-size: 12px;
   font-weight: 700;
-  color: #FFF;
+  color: var(--text-strong);
   margin-bottom: 2px;
 }
 
@@ -1275,8 +1293,8 @@ main::-webkit-scrollbar {
 /* Hifz Workshop Grid Styles */
 .hifz-grid-item {
   aspect-ratio: 1 / 1;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-strong) 2%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
   border-radius: var(--radius-md);
   display: flex;
   justify-content: center;
@@ -1300,8 +1318,8 @@ main::-webkit-scrollbar {
 
 /* Hifz Grid Item Color Mappings by SRS difficulty status */
 .hifz-grid-item.srs-none {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text-strong) 2%, transparent);
+  border-color: color-mix(in srgb, var(--text-strong) 5%, transparent);
 }
 
 .hifz-grid-item.srs-hard {
@@ -1342,7 +1360,7 @@ main::-webkit-scrollbar {
 .hifz-mic-pulse-active {
   animation: pulseHifzMic 1.2s infinite ease-in-out !important;
   background: var(--ruby) !important;
-  color: #FFF !important;
+  color: var(--text-strong) !important;
   box-shadow: 0 0 25px rgba(239, 68, 68, 0.5) !important;
 }
 
@@ -1357,19 +1375,19 @@ main::-webkit-scrollbar {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text-strong) 3%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--text-strong) 8%, transparent);
   transition: all 0.25s ease-out;
 }
 
 .heatmap-cell.level-0 {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text-strong) 3%, transparent);
+  border-color: color-mix(in srgb, var(--text-strong) 8%, transparent);
 }
 
 .heatmap-cell.level-1 {
-  background: rgba(212, 175, 55, 0.12);
-  border-color: rgba(212, 175, 55, 0.25);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 .heatmap-cell.level-2 {
@@ -1388,9 +1406,9 @@ input[type="range"] {
   -webkit-appearance: none;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--text-strong) 8%, transparent);
   outline: none;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -1407,3 +1425,12 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
+
+
+/* Settings Drawer additions */
+.settings-section { margin-bottom: 22px; }
+.settings-section:last-child { margin-bottom: 0; }
+.settings-label { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: block; }
+.palette-swatches { display: flex; gap: 14px; }
+.palette-swatch { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; padding: 0; transition: var(--transition-smooth); }
+.palette-swatch.active { border-color: var(--text-strong); transform: scale(1.08); }

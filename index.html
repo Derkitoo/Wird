@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wird - Votre Compagnon Coranique Quotidien</title>
   <meta name="description" content="Une application moderne et spirituelle pour lire, comprendre et mémoriser le Coran au quotidien.">
+  <script>
+    (function(){
+      try {
+        var theme = localStorage.getItem('wird_theme') || 'dark';
+        var palette = localStorage.getItem('wird_palette') || 'gold';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-palette', palette);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#070913">
@@ -17,9 +27,9 @@
     
     <!-- Top Header -->
     <header class="app-header" style="padding: 15px 20px 0 20px;">
-      <div class="btn-icon-header">
-        <svg style="width:20px;height:20px;fill:currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+      <div class="btn-icon-header" id="btn-open-settings">
+        <svg style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </div>
       <div class="app-title" style="text-align: center; font-family: 'Outfit', sans-serif;">WIRD</div>
@@ -651,6 +661,32 @@
 
     <!-- Backdrop Overlay for drawers -->
     <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- Settings Drawer -->
+    <div id="settings-drawer" class="tafsir-drawer">
+      <div class="tafsir-header">
+        <h3>Paramètres</h3>
+        <button id="settings-close" class="btn-close-drawer">&times;</button>
+      </div>
+      <div class="tafsir-content">
+        <div class="settings-section">
+          <span class="settings-label">Apparence</span>
+          <div class="mode-switches" style="width:100%;">
+            <button id="btn-theme-light" class="switch-btn" style="flex:1;">Clair</button>
+            <button id="btn-theme-dark" class="switch-btn active" style="flex:1;">Sombre</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <span class="settings-label">Couleur d'accent</span>
+          <div class="palette-swatches">
+            <button class="palette-swatch active" data-palette="gold" style="background:#D4AF37;" title="Or"></button>
+            <button class="palette-swatch" data-palette="emerald" style="background:#0f9d63;" title="Émeraude"></button>
+            <button class="palette-swatch" data-palette="sapphire" style="background:#3B82F6;" title="Saphir"></button>
+            <button class="palette-swatch" data-palette="amber" style="background:#d97706;" title="Ambre"></button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Tafsir Bottom Drawer (Drawer Side Panel) -->
     <div id="tafsir-drawer" class="tafsir-drawer">

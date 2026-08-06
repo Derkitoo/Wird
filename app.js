@@ -2311,6 +2311,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ==================== SETTINGS: THEME & PALETTE ====================
+  const settingsDrawer = document.getElementById('settings-drawer');
+  const btnOpenSettings = document.getElementById('btn-open-settings');
+  const settingsClose = document.getElementById('settings-close');
+  const btnThemeLight = document.getElementById('btn-theme-light');
+  const btnThemeDark = document.getElementById('btn-theme-dark');
+  const paletteSwatches = document.querySelectorAll('.palette-swatch');
+
+  state.theme = localStorage.getItem('wird_theme') || 'dark';
+  state.palette = localStorage.getItem('wird_palette') || 'gold';
+
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', state.theme);
+    document.documentElement.setAttribute('data-palette', state.palette);
+    localStorage.setItem('wird_theme', state.theme);
+    localStorage.setItem('wird_palette', state.palette);
+
+    if (btnThemeLight && btnThemeDark) {
+      btnThemeLight.classList.toggle('active', state.theme === 'light');
+      btnThemeDark.classList.toggle('active', state.theme === 'dark');
+    }
+    paletteSwatches.forEach(sw => {
+      sw.classList.toggle('active', sw.dataset.palette === state.palette);
+    });
+
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', state.theme === 'light' ? '#f2efe9' : '#070913');
+  }
+
+  function openSettingsDrawer() {
+    if (settingsDrawer && drawerOverlay) {
+      settingsDrawer.classList.add('open');
+      drawerOverlay.classList.add('active');
+    }
+  }
+  function closeSettingsDrawer() {
+    if (settingsDrawer && drawerOverlay) {
+      settingsDrawer.classList.remove('open');
+      drawerOverlay.classList.remove('active');
+    }
+  }
+
+  if (btnOpenSettings) btnOpenSettings.addEventListener('click', openSettingsDrawer);
+  if (settingsClose) settingsClose.addEventListener('click', closeSettingsDrawer);
+  if (btnThemeLight) btnThemeLight.addEventListener('click', () => { state.theme = 'light'; applyTheme(); });
+  if (btnThemeDark) btnThemeDark.addEventListener('click', () => { state.theme = 'dark'; applyTheme(); });
+  paletteSwatches.forEach(sw => {
+    sw.addEventListener('click', () => { state.palette = sw.dataset.palette; applyTheme(); });
+  });
+
+  applyTheme();
+
+  if (drawerOverlay) {
+    drawerOverlay.addEventListener('click', closeSettingsDrawer);
+  }
+
   // Initialize UI & load data
   initSelectors();
   calculateWirdPlanTotal();
