@@ -16,24 +16,24 @@
     })();
   </script>
   <script>
-    // Runs before first paint so text is scaled correctly from the very first
-    // frame (no flash of wrongly-sized content), then keeps recalculating on
-    // every real resize/orientation/fold event for the lifetime of the page.
-    // No fixed device-class breakpoints: every value below is derived from
-    // the actual measured viewport width/height.
+    // Runs before first paint so the app is scaled correctly from the very
+    // first frame (no flash of wrongly-sized content), then keeps
+    // recalculating on every real resize/orientation/fold event for the
+    // lifetime of the page. No fixed device-class breakpoints: every value
+    // below is derived from the actual measured viewport width/height.
     (function () {
       var root = document.documentElement;
-      var BASE_FONT = 16;
 
-      // Text never shrinks below 1x: below this "physically phone-sized"
+      // Scale never drops below 1x: below this "physically phone-sized"
       // minimum viewport dimension, scale stays at 1 regardless of how
       // narrow the screen is (a foldable's cover screen is narrow but not
       // physically small, so it must not be treated as a small screen).
       var MIN_DIM_FLOOR = 420;
       // Scale reaches its cap once the smaller viewport dimension reaches
-      // this size (tablets, unfolded foldables).
+      // this size (tablets, unfolded foldables — e.g. an unfolded Z Fold's
+      // ~984x1092 CSS viewport is comfortably past this).
       var MIN_DIM_CAP = 900;
-      var SCALE_MAX = 1.2;
+      var SCALE_MAX = 1.4;
 
       var TALL_ASPECT_THRESHOLD = 2.3;
 
@@ -52,14 +52,13 @@
 
         var isTallNarrow = vh > vw && aspect >= TALL_ASPECT_THRESHOLD;
 
-        root.style.fontSize = (BASE_FONT * scale).toFixed(2) + 'px';
+        // Applied as `zoom` on #app-container in style.css, not as a
+        // font-size change: this scales the whole UI (text, icons, nav,
+        // padding) together as one cohesive unit.
         root.style.setProperty('--text-scale', scale.toFixed(4));
         root.style.setProperty('--viewport-w', vw.toFixed(1) + 'px');
         root.style.setProperty('--viewport-h', vh.toFixed(1) + 'px');
         root.setAttribute('data-aspect', isTallNarrow ? 'tall-narrow' : 'normal');
-
-        window.__wirdTextScale = scale;
-        window.dispatchEvent(new CustomEvent('wird:scalechange', { detail: { scale: scale } }));
       }
 
       // A short setTimeout debounce, not requestAnimationFrame: rAF only

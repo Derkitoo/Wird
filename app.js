@@ -1047,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
           arabicHtml = `
             <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
               <span>Afficher le texte arabe</span>
-              <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize * (window.__wirdTextScale || 1)}px; color:#FFF; line-height:2;">
+              <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize}px; color:#FFF; line-height:2;">
                 ${v.textAr}
               </div>
             </div>
@@ -1077,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="verse-text-ar-container">
           ${state.hifzLevel === 4 && state.readerMode === 'memorize' 
             ? arabicHtml 
-            : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize * (window.__wirdTextScale || 1)}px">${arabicHtml}</div>`
+            : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
           }
         </div>
         ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
@@ -2252,20 +2252,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Font Size
-  // state.arabicFontSize is the user's manual preference at 1x screen scale;
-  // the responsive engine (inline script in index.html <head>) separately
-  // scales the whole app for screen size/density via window.__wirdTextScale.
-  // These two multiply together so a tablet/unfolded-foldable reader still
-  // benefits from the bigger base text while keeping the user's own +/- intact.
-  function applyArabicFontSize() {
-    const px = state.arabicFontSize * (window.__wirdTextScale || 1);
-    document.querySelectorAll('.verse-text-ar, [id^="full-ar-"]').forEach(el => {
-      el.style.fontSize = `${px}px`;
-    });
-  }
-
-  window.addEventListener('wird:scalechange', applyArabicFontSize);
-
+  // state.arabicFontSize is a plain px value; the responsive engine (inline
+  // script in index.html <head>) scales the whole app uniformly via CSS
+  // `zoom` on #app-container, so this doesn't need to account for screen
+  // size itself — zoom scales it along with everything else automatically.
   const btnFontDec = document.getElementById('btn-font-dec');
   const btnFontInc = document.getElementById('btn-font-inc');
 
@@ -2273,7 +2263,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFontDec.addEventListener('click', () => {
       if (state.arabicFontSize > 18) {
         state.arabicFontSize -= 2;
-        applyArabicFontSize();
+        document.querySelectorAll('.verse-text-ar').forEach(el => {
+          el.style.fontSize = `${state.arabicFontSize}px`;
+        });
       }
     });
   }
@@ -2282,7 +2274,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFontInc.addEventListener('click', () => {
       if (state.arabicFontSize < 40) {
         state.arabicFontSize += 2;
-        applyArabicFontSize();
+        document.querySelectorAll('.verse-text-ar').forEach(el => {
+          el.style.fontSize = `${state.arabicFontSize}px`;
+        });
       }
     });
   }

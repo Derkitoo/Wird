@@ -86,18 +86,23 @@
 /*
  * Responsive scaling system (see the inline script in <head> of index.html):
  * that script measures the real viewport on load/resize/orientationchange/fold
- * and continuously derives, never via fixed pixel breakpoints:
- *   --text-scale + html.style.fontSize : a multiplier that only ever grows
- *     (floor of 1x) as the screen's *smaller* dimension grows past phone size,
- *     so a narrow-but-tall foldable cover screen (small width, phone-like
- *     physical size) never gets shrunk, while tablets/unfolded foldables get
- *     modestly larger text. All font-size values below are in rem so they
- *     inherit this scale automatically.
- *   data-aspect="tall-narrow"|"normal" : flags extreme height:width ratios
- *     (foldable cover screens) so short view content can be centered instead
- *     of stranded at the top with dead space below.
- * The app itself always fills the real viewport edge to edge, on any
- * screen size — no centered/boxed "card" mode, no dead space around it.
+ * and continuously derives --text-scale, never via fixed pixel breakpoints —
+ * a multiplier that only ever grows (floor of 1x) as the screen's *smaller*
+ * dimension grows past phone size, so a narrow-but-tall foldable cover screen
+ * (small width, phone-like physical size) never gets shrunk, while tablets/
+ * unfolded foldables scale up.
+ *
+ * That scale is applied as `zoom` on #app-container, not as a font-size
+ * change: zoom inflates the whole rendered subtree together — text, icons,
+ * padding, the bottom nav's height — as one cohesive unit, instead of only
+ * enlarging text while everything else around it stays pixel-fixed and ends
+ * up looking shrunken by comparison on a genuinely large screen (this is
+ * exactly what happened on an unfolded Z Fold: text grew a little, the nav
+ * bar didn't, so the nav looked "shrunk" relative to it).
+ *
+ * data-aspect="tall-narrow"|"normal" flags extreme height:width ratios
+ * (foldable cover screens) so short view content can be centered instead of
+ * stranded at the top with dead space below.
  */
 html {
   font-size: 16px;
@@ -110,13 +115,14 @@ body {
   overflow: hidden;
 }
 
-/* App Container - always fills the real viewport, on every screen size */
+/* App Container - always visually fills the real viewport, on every screen
+   size. Its layout box is sized to 1/scale of the real viewport, then zoom
+   inflates the whole rendered subtree back up by `scale`, landing exactly
+   on the real viewport dimensions again — no dead space, no boxing. */
 #app-container {
-  width: 100%;
-  width: 100vw;
-  width: 100dvw;
-  height: 100vh;
-  height: 100dvh;
+  width: calc(100dvw / var(--text-scale, 1));
+  height: calc(100dvh / var(--text-scale, 1));
+  zoom: var(--text-scale, 1);
   background: var(--bg-dark-radial);
   box-shadow: none;
   position: relative;
