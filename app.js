@@ -1,19 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Register Service Worker for Offline / PWA Support
   if ('serviceWorker' in navigator) {
-    // Unregister old active workers to force immediate cache update
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-      for (let registration of registrations) {
-        registration.unregister().then(() => {
-          console.log('[PWA] Old Service Worker unregistered.');
-        });
-      }
-    });
-
     navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('[PWA] Service Worker inscrit avec succès. Scope :', reg.scope))
       .catch(err => console.error('[PWA] Échec d\'inscription du Service Worker :', err));
   }
+
+  // PWA Installation Prompt Trigger
+  let deferredPrompt = null;
+  const btnPwaInstall = document.getElementById('btn-pwa-install');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (btnPwaInstall) {
+      btnPwaInstall.style.display = 'inline-flex';
+    }
+  });
+
+  if (btnPwaInstall) {
+    btnPwaInstall.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        console.log('[PWA] L\'utilisateur a accepté d\'installer la PWA.');
+      } else {
+        console.log('[PWA] L\'utilisateur a refusé l\'installation.');
+      }
+      deferredPrompt = null;
+      btnPwaInstall.style.display = 'none';
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] Application installée !');
+    if (btnPwaInstall) btnPwaInstall.style.display = 'none';
+    showToast("PWA Installée ! 📲", "L'application a été ajoutée à votre écran d'accueil.");
+  });
 
   // Global State
   const state = {
