@@ -35,11 +35,6 @@
       var MIN_DIM_CAP = 900;
       var SCALE_MAX = 1.2;
 
-      // Comfortable reading column width; grows slightly with the text scale
-      // so larger screens don't feel cramped, capped so it never gets absurd.
-      var CARD_BASE_WIDTH = 480;
-      var CARD_MAX_WIDTH = 640;
-
       var TALL_ASPECT_THRESHOLD = 2.3;
 
       function computeAndApply() {
@@ -55,16 +50,12 @@
         var t = Math.max(0, Math.min(1, (minDim - MIN_DIM_FLOOR) / (MIN_DIM_CAP - MIN_DIM_FLOOR)));
         var scale = 1 + t * (SCALE_MAX - 1);
 
-        var shellMaxWidth = Math.min(CARD_MAX_WIDTH, CARD_BASE_WIDTH * scale);
-        var isCardMode = vw > shellMaxWidth + 40;
         var isTallNarrow = vh > vw && aspect >= TALL_ASPECT_THRESHOLD;
 
         root.style.fontSize = (BASE_FONT * scale).toFixed(2) + 'px';
         root.style.setProperty('--text-scale', scale.toFixed(4));
-        root.style.setProperty('--shell-max-width', shellMaxWidth.toFixed(1) + 'px');
         root.style.setProperty('--viewport-w', vw.toFixed(1) + 'px');
         root.style.setProperty('--viewport-h', vh.toFixed(1) + 'px');
-        root.setAttribute('data-shell', isCardMode ? 'card' : 'full');
         root.setAttribute('data-aspect', isTallNarrow ? 'tall-narrow' : 'normal');
 
         window.__wirdTextScale = scale;

@@ -86,20 +86,18 @@
 /*
  * Responsive scaling system (see the inline script in <head> of index.html):
  * that script measures the real viewport on load/resize/orientationchange/fold
- * and continuously derives two things — never via fixed pixel breakpoints:
+ * and continuously derives, never via fixed pixel breakpoints:
  *   --text-scale + html.style.fontSize : a multiplier that only ever grows
  *     (floor of 1x) as the screen's *smaller* dimension grows past phone size,
  *     so a narrow-but-tall foldable cover screen (small width, phone-like
  *     physical size) never gets shrunk, while tablets/unfolded foldables get
  *     modestly larger text. All font-size values below are in rem so they
  *     inherit this scale automatically.
- *   data-shell="card"|"full" + --shell-max-width : whether the viewport is
- *     wide enough that edge-to-edge content would exceed a comfortable
- *     reading column, in which case the app renders as a centered, capped-
- *     width "page" instead of stretching full width.
  *   data-aspect="tall-narrow"|"normal" : flags extreme height:width ratios
  *     (foldable cover screens) so short view content can be centered instead
  *     of stranded at the top with dead space below.
+ * The app itself always fills the real viewport edge to edge, on any
+ * screen size — no centered/boxed "card" mode, no dead space around it.
  */
 html {
   font-size: 16px;
@@ -109,18 +107,14 @@ body {
   font-family: var(--font-ui);
   background: var(--page-bg);
   color: var(--text-primary);
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   overflow: hidden;
 }
 
-/* App Container - Fully Native Responsive Mobile & PWA Layout */
+/* App Container - always fills the real viewport, on every screen size */
 #app-container {
   width: 100%;
-  max-width: 100%;
+  width: 100vw;
+  width: 100dvw;
   height: 100vh;
   height: 100dvh;
   background: var(--bg-dark-radial);
@@ -131,19 +125,6 @@ body {
   overflow: hidden;
   border: none;
   border-radius: 0;
-}
-
-/* Viewport wider than a comfortable reading column (tablets, unfolded
-   foldables, desktop windows) — render as a centered, bounded "page" instead
-   of stretching content edge-to-edge. Driven by data-shell, set continuously
-   from real measured viewport width, not a fixed device-class breakpoint. */
-:root[data-shell="card"] #app-container {
-  max-width: var(--shell-max-width, 30rem);
-  height: min(92vh, 57.5rem);
-  height: min(92dvh, 57.5rem);
-  border-radius: var(--radius-xl);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 /* Main Content Area */
