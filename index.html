@@ -15,6 +15,106 @@
       } catch (e) {}
     })();
   </script>
+  <script>
+    // Runs before first paint so text is scaled correctly from the very first
+    // frame (no flash of wrongly-sized content), then keeps recalculating on
+    // every real resize/orientation/fold event for the lifetime of the page.
+    // No fixed device-class breakpoints: every value below is derived from
+    // the actual measured viewport width/height.
+    (function () {
+      var root = document.documentElement;
+      var BASE_FONT = 16;
+
+      // Text never shrinks below 1x: below this "physically phone-sized"
+      // minimum viewport dimension, scale stays at 1 regardless of how
+      // narrow the screen is (a foldable's cover screen is narrow but not
+      // physically small, so it must not be treated as a small screen).
+      var MIN_DIM_FLOOR = 420;
+      // Scale reaches its cap once the smaller viewport dimension reaches
+      // this size (tablets, unfolded foldables).
+      var MIN_DIM_CAP = 900;
+      var SCALE_MAX = 1.2;
+
+      // Comfortable reading column width; grows slightly with the text scale
+      // so larger screens don't feel cramped, capped so it never gets absurd.
+      var CARD_BASE_WIDTH = 480;
+      var CARD_MAX_WIDTH = 640;
+
+      var TALL_ASPECT_THRESHOLD = 2.3;
+
+      function computeAndApply() {
+        var vv = window.visualViewport;
+        var vw = (vv && vv.width) || window.innerWidth;
+        var vh = (vv && vv.height) || window.innerHeight;
+        if (!vw || !vh) return;
+
+        var minDim = Math.min(vw, vh);
+        var maxDim = Math.max(vw, vh);
+        var aspect = maxDim / minDim;
+
+        var t = Math.max(0, Math.min(1, (minDim - MIN_DIM_FLOOR) / (MIN_DIM_CAP - MIN_DIM_FLOOR)));
+        var scale = 1 + t * (SCALE_MAX - 1);
+
+        var shellMaxWidth = Math.min(CARD_MAX_WIDTH, CARD_BASE_WIDTH * scale);
+        var isCardMode = vw > shellMaxWidth + 40;
+        var isTallNarrow = vh > vw && aspect >= TALL_ASPECT_THRESHOLD;
+
+        root.style.fontSize = (BASE_FONT * scale).toFixed(2) + 'px';
+        root.style.setProperty('--text-scale', scale.toFixed(4));
+        root.style.setProperty('--shell-max-width', shellMaxWidth.toFixed(1) + 'px');
+        root.style.setProperty('--viewport-w', vw.toFixed(1) + 'px');
+        root.style.setProperty('--viewport-h', vh.toFixed(1) + 'px');
+        root.setAttribute('data-shell', isCardMode ? 'card' : 'full');
+        root.setAttribute('data-aspect', isTallNarrow ? 'tall-narrow' : 'normal');
+
+        window.__wirdTextScale = scale;
+        window.dispatchEvent(new CustomEvent('wird:scalechange', { detail: { scale: scale } }));
+      }
+
+      // A short setTimeout debounce, not requestAnimationFrame: rAF only
+      // fires while the page is actively compositing visible frames, so a
+      // backgrounded/minimized tab (or one mid-fold-animation without focus)
+      // could silently never recompute. setTimeout runs on the normal JS
+      // event loop regardless of paint/visibility state.
+      var debounceId = null;
+      function scheduleUpdate() {
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = setTimeout(function () {
+          debounceId = null;
+          computeAndApply();
+        }, 60);
+      }
+
+      computeAndApply();
+      window.addEventListener('resize', scheduleUpdate);
+      window.addEventListener('orientationchange', scheduleUpdate);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scheduleUpdate);
+        window.visualViewport.addEventListener('scroll', scheduleUpdate);
+      }
+      // Catch any resize/fold that happened while backgrounded and was missed.
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') computeAndApply();
+      });
+
+      // Belt-and-braces polling fallback: some browsers (notably a few
+      // foldable OEM WebViews) are known to skip firing resize/
+      // orientationchange reliably across a fold/unfold transition. This
+      // catches anything the events above missed, cheaply (two number reads).
+      var lastVw = window.innerWidth;
+      var lastVh = window.innerHeight;
+      setInterval(function () {
+        var vv = window.visualViewport;
+        var vw = (vv && vv.width) || window.innerWidth;
+        var vh = (vv && vv.height) || window.innerHeight;
+        if (vw !== lastVw || vh !== lastVh) {
+          lastVw = vw;
+          lastVh = vh;
+          computeAndApply();
+        }
+      }, 500);
+    })();
+  </script>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#070913">
@@ -46,7 +146,7 @@
       <!-- ================= VIEW 1: DASHBOARD ================= -->
       <section id="view-dashboard" class="view active">
         <!-- PWA Install Banner -->
-        <button id="btn-pwa-install" class="glass-card" style="display: none; margin-bottom: 15px; width: 100%; align-items: center; justify-content: center; gap: 10px; font-size: 13px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(16, 185, 129, 0.2)); color: #FFF; font-weight: 700; padding: 14px; border-radius: 12px; border: 1px solid var(--primary); cursor: pointer; text-align: center;">
+        <button id="btn-pwa-install" class="glass-card" style="display: none; margin-bottom: 15px; width: 100%; align-items: center; justify-content: center; gap: 10px; font-size: 0.8125rem; background: linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(16, 185, 129, 0.2)); color: #FFF; font-weight: 700; padding: 14px; border-radius: 12px; border: 1px solid var(--primary); cursor: pointer; text-align: center;">
           <svg style="width:20px;height:20px;fill:var(--primary)" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
           Installer l'application Wird (PWA)
         </button>
@@ -70,9 +170,9 @@
         </div>
         <!-- Celebration Card (Shown when 100% prayers checked) -->
         <div id="celebration-card" class="glass-card" style="display: none; margin-top: 16px; padding: 20px; text-align: center; border: 1.5px solid var(--emerald); background: rgba(16, 185, 129, 0.05); animation: pulseGreen 2s infinite; flex-direction:column; align-items:center; gap:8px;">
-          <span style="font-size: 28px;">🏆</span>
-          <h4 style="font-size: 15px; font-weight:700; color:#FFF; margin: 4px 0 0 0;">Wird du jour complété !</h4>
-          <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">Vous avez lu l'équivalent d'un Juz complet aujourd'hui. Votre assiduité est enregistrée.</p>
+          <span style="font-size: 1.75rem;">🏆</span>
+          <h4 style="font-size: 0.9375rem; font-weight:700; color:#FFF; margin: 4px 0 0 0;">Wird du jour complété !</h4>
+          <p style="font-size: 0.6875rem; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">Vous avez lu l'équivalent d'un Juz complet aujourd'hui. Votre assiduité est enregistrée.</p>
           <button id="btn-next-juz-trigger" class="btn-action-small" style="background: var(--emerald); color:#FFF; border:none; padding: 8px 16px; border-radius: var(--radius-md); font-weight:700; margin: 0 auto; width:auto; justify-content:center; cursor:pointer;">
             Passer au Juz Suivant ➔
           </button>
@@ -81,11 +181,11 @@
         <!-- Resume Reading Card (Last position helper) -->
         <div id="resume-reading-card" class="glass-card" style="display: none; margin-top: 16px; padding: 16px; align-items: center; justify-content: space-between; gap: 12px; border-left: 3px solid var(--primary); animation: fadeIn 0.4s ease-out;">
           <div style="text-align: left;">
-            <span style="font-size: 9px; text-transform:uppercase; color:var(--primary); font-weight:700; display:block; margin-bottom: 2px;">Dernière lecture</span>
-            <h4 id="resume-reading-ref" style="font-size:13px; font-weight:700; color:#FFF; margin:0;">Juz 30 • Sourate An-Naba</h4>
-            <p id="resume-reading-detail" style="font-size:10px; color:var(--text-muted); margin:0; margin-top:2px;">Page 1 • En cours</p>
+            <span style="font-size: 0.5625rem; text-transform:uppercase; color:var(--primary); font-weight:700; display:block; margin-bottom: 2px;">Dernière lecture</span>
+            <h4 id="resume-reading-ref" style="font-size: 0.8125rem; font-weight:700; color:#FFF; margin:0;">Juz 30 • Sourate An-Naba</h4>
+            <p id="resume-reading-detail" style="font-size: 0.625rem; color:var(--text-muted); margin:0; margin-top:2px;">Page 1 • En cours</p>
           </div>
-          <button id="btn-resume-reading" class="btn-action-small" style="background: var(--primary); color:#070913; font-weight:700; padding:8px 14px; border-radius:var(--radius-md); font-size:11px; cursor:pointer; width:auto; justify-content:center; box-shadow: 0 2px 8px var(--primary-glow);">
+          <button id="btn-resume-reading" class="btn-action-small" style="background: var(--primary); color:#070913; font-weight:700; padding:8px 14px; border-radius:var(--radius-md); font-size: 0.6875rem; cursor:pointer; width:auto; justify-content:center; box-shadow: 0 2px 8px var(--primary-glow);">
             Reprendre
           </button>
         </div>
@@ -120,17 +220,17 @@
         <div id="srs-revisions-card" class="glass-card" style="display: none; border-left: 3px solid var(--ruby); background: rgba(239, 68, 68, 0.04); margin-top: 16px; margin-bottom: 20px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
             <div>
-              <h3 style="font-size: 15px; font-weight:600; color: #FFF; margin-bottom: 2px;">Révisions du Jour</h3>
-              <p id="srs-revisions-count" style="font-size: 11px; color: var(--text-secondary);">Vous avez 0 verset à réviser aujourd'hui.</p>
+              <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF; margin-bottom: 2px;">Révisions du Jour</h3>
+              <p id="srs-revisions-count" style="font-size: 0.6875rem; color: var(--text-secondary);">Vous avez 0 verset à réviser aujourd'hui.</p>
             </div>
-            <button id="btn-start-revision" class="btn-action-small" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--ruby); color: #FFF; padding: 6px 12px; border-radius: var(--radius-md); font-size:11px; font-weight:600; cursor: pointer; white-space: nowrap;">
+            <button id="btn-start-revision" class="btn-action-small" style="background: rgba(239, 68, 68, 0.2); border: 1px solid var(--ruby); color: #FFF; padding: 6px 12px; border-radius: var(--radius-md); font-size: 0.6875rem; font-weight:600; cursor: pointer; white-space: nowrap;">
               Réviser
             </button>
           </div>
         </div>
 
         <!-- Prayer/Reading Segments checklist -->
-        <h2 style="font-size: 16px; font-weight:600; margin-top: 24px; margin-bottom: 12px; color: #FFF; padding-left: 2px;">
+        <h2 style="font-size: 1rem; font-weight:600; margin-top: 24px; margin-bottom: 12px; color: #FFF; padding-left: 2px;">
           Progression par prière
         </h2>
         <div class="prayer-wird-grid">
@@ -178,44 +278,44 @@
 
         <!-- Toggler for Wird Configurer -->
         <div style="margin-bottom: 24px; display: flex; justify-content: flex-end; padding-right: 4px; margin-top: -6px;">
-          <button id="btn-toggle-wird-planner" style="background: none; border: none; color: var(--primary); font-size: 11px; font-weight:700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding:0; outline:none;">
+          <button id="btn-toggle-wird-planner" style="background: none; border: none; color: var(--primary); font-size: 0.6875rem; font-weight:700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding:0; outline:none;">
             ⚙️ Personnaliser les pages par prière
           </button>
         </div>
 
         <!-- Collapsible planner panel -->
         <div id="wird-planner-panel" class="glass-card" style="display: none; margin-bottom: 20px; padding: 16px; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease-out;">
-          <h4 style="font-size: 12px; font-weight:700; color:var(--primary); text-transform:uppercase; margin: 0;">Répartition des pages</h4>
+          <h4 style="font-size: 0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; margin: 0;">Répartition des pages</h4>
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-size: 11px; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size: 0.6875rem; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
               <span>Pages à lire par prière :</span>
               <span id="wird-total-pages-label" style="font-weight:700; color:var(--primary);">Total : 20 pages</span>
             </div>
             
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:11px; width:65px; color:#FFF;">Fajr :</span>
+              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Fajr :</span>
               <input type="range" id="slider-fajr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-fajr" style="font-size:11px; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              <span id="label-slider-fajr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:11px; width:65px; color:#FFF;">Dhuhr :</span>
+              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Dhuhr :</span>
               <input type="range" id="slider-dhuhr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-dhuhr" style="font-size:11px; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              <span id="label-slider-dhuhr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:11px; width:65px; color:#FFF;">Asr :</span>
+              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Asr :</span>
               <input type="range" id="slider-asr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-asr" style="font-size:11px; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              <span id="label-slider-asr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:11px; width:65px; color:#FFF;">Maghrib :</span>
+              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Maghrib :</span>
               <input type="range" id="slider-maghrib" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-maghrib" style="font-size:11px; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              <span id="label-slider-maghrib" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size:11px; width:65px; color:#FFF;">Isha :</span>
+              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Isha :</span>
               <input type="range" id="slider-isha" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-isha" style="font-size:11px; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              <span id="label-slider-isha" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
             </div>
           </div>
         </div>
@@ -282,19 +382,19 @@
 
         <!-- Consistency Heatmap Card -->
         <div class="glass-card" style="margin-bottom: 24px; padding: 16px;">
-          <h3 style="font-size: 14px; font-weight: 600; color: #FFF; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top:0;">
+          <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top:0;">
             <span>Assiduité du Wird</span>
-            <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">28 derniers jours</span>
+            <span style="font-size: 0.625rem; color:var(--text-muted); font-weight:normal;">28 derniers jours</span>
           </h3>
           <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
-            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 8px; color: var(--text-muted); padding-right: 4px; text-align:right; line-height:10px;">
+            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.5rem; color: var(--text-muted); padding-right: 4px; text-align:right; line-height:10px;">
               <span>Lun</span><span></span><span>Mer</span><span></span><span>Ven</span><span></span><span>Dim</span>
             </div>
             <div id="heatmap-grid" style="display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column; gap: 4px;">
               <!-- Populated by JS -->
             </div>
           </div>
-          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 8px; color: var(--text-muted); margin-top: 10px;">
+          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.5rem; color: var(--text-muted); margin-top: 10px;">
             <span>Moins</span>
             <span style="width:8px; height:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:2px;"></span>
             <span style="width:8px; height:8px; background:rgba(212, 175, 55, 0.2); border:1px solid rgba(212, 175, 55, 0.4); border-radius:2px;"></span>
@@ -326,7 +426,7 @@
         </div>
 
         <!-- Display Toggles (Translation & Phonetics) -->
-        <div class="glass-card" style="margin: 0 0 14px 0; padding: 10px 14px; display: flex; justify-content: space-around; font-size: 11px; gap:8px;">
+        <div class="glass-card" style="margin: 0 0 14px 0; padding: 10px 14px; display: flex; justify-content: space-around; font-size: 0.6875rem; gap:8px;">
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
             <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
           </label>
@@ -340,10 +440,10 @@
 
         <!-- Dropdowns for Juz and Reciter selections -->
         <div class="reader-selectors-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
-          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 13px; outline: none; cursor: pointer;">
+          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
-          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 13px; outline: none; cursor: pointer;">
+          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
         </div>
@@ -351,10 +451,10 @@
         <!-- Audio Offline Cache Manager -->
         <div class="glass-card" style="margin-bottom: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
           <div style="display:flex; flex-direction:column; gap:2px;">
-            <span id="audio-download-status" style="font-size: 11px; color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
-            <span id="audio-download-detail" style="font-size: 9px; color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
+            <span id="audio-download-status" style="font-size: 0.6875rem; color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
+            <span id="audio-download-detail" style="font-size: 0.5625rem; color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
           </div>
-          <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; font-size:11px; border-radius:var(--radius-md); font-weight:700; width:auto; justify-content:center;">
+          <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; font-size: 0.6875rem; border-radius:var(--radius-md); font-weight:700; width:auto; justify-content:center;">
             📥 Télécharger
           </button>
         </div>
@@ -366,17 +466,17 @@
         <!-- Memorization (Hifz) Assistance toolbar -->
         <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 12px; border-radius: var(--radius-lg);">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <span style="font-size: 11px; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
+            <span style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
             <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
-              <button class="switch-btn active" id="hifz-btn-level1" style="padding: 4px 8px; font-size:10px; border-radius:12px;">Complet</button>
-              <button class="switch-btn" id="hifz-btn-level2" style="padding: 4px 8px; font-size:10px; border-radius:12px;">1er Mot</button>
-              <button class="switch-btn" id="hifz-btn-level3" style="padding: 4px 8px; font-size:10px; border-radius:12px;">Troué</button>
-              <button class="switch-btn" id="hifz-btn-level4" style="padding: 4px 8px; font-size:10px; border-radius:12px;">Masqué</button>
+              <button class="switch-btn active" id="hifz-btn-level1" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Complet</button>
+              <button class="switch-btn" id="hifz-btn-level2" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">1er Mot</button>
+              <button class="switch-btn" id="hifz-btn-level3" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Troué</button>
+              <button class="switch-btn" id="hifz-btn-level4" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Masqué</button>
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 4px;">
-            <span style="font-size: 11px; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
-            <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-size: 11px; outline: none; cursor: pointer;">
+            <span style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
+            <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.6875rem; outline: none; cursor: pointer;">
               <option value="1">1x (Normal)</option>
               <option value="3">3x en boucle</option>
               <option value="5">5x en boucle</option>
@@ -388,7 +488,7 @@
         <!-- Spinner Loader -->
         <div id="reader-loader" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: var(--text-secondary);">
           <div class="spinner" style="width: 40px; height: 40px; border: 3px solid rgba(212, 175, 55, 0.15); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-          <span style="font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">Chargement du Wird coranique...</span>
+          <span style="font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.5px;">Chargement du Wird coranique...</span>
         </div>
 
         <!-- Rendered Quran Content (Populated by JS) -->
@@ -399,7 +499,7 @@
         <!-- Page Pagination controls -->
         <div id="reader-page-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding:12px 0; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
           <button id="btn-next-page" class="btn-action-small" style="width:auto; padding:8px 14px; justify-content:center; cursor:pointer;">◀ Suivant</button>
-          <span id="label-reader-page" style="font-size:12px; font-weight:700; color:var(--primary);">Page 1/20 (Page 582)</span>
+          <span id="label-reader-page" style="font-size: 0.75rem; font-weight:700; color:var(--primary);">Page 1/20 (Page 582)</span>
           <button id="btn-prev-page" class="btn-action-small" style="width:auto; padding:8px 14px; justify-content:center; cursor:pointer;">Précédent ▶</button>
         </div>
       </section>
@@ -407,8 +507,8 @@
       <!-- ================= VIEW 3: MEMORIZATION (HIFZ) ================= -->
       <section id="view-memorize" class="view">
         <div class="social-header" style="margin-bottom: 16px;">
-          <h2 style="font-size: 20px; font-weight: 700; color: #FFF;">Atelier Mémorisation</h2>
-          <span id="hifz-juz-badge" style="font-size: 11px; color: var(--primary); font-weight:600; padding: 4px 10px; background: rgba(212, 175, 55, 0.1); border-radius:20px;">
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: #FFF;">Atelier Mémorisation</h2>
+          <span id="hifz-juz-badge" style="font-size: 0.6875rem; color: var(--primary); font-weight:600; padding: 4px 10px; background: rgba(212, 175, 55, 0.1); border-radius:20px;">
             Juz 30
           </span>
         </div>
@@ -416,8 +516,8 @@
         <!-- Hifz Stats summary card -->
         <div class="glass-card" style="margin-bottom: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
           <div>
-            <h3 style="font-size: 14px; font-weight: 600; color: #FFF; margin-bottom: 4px;">Progression Hifz</h3>
-            <p id="hifz-progress-detail" style="font-size: 11px; color: var(--text-secondary);">0/40 versets maîtrisés (0%)</p>
+            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 4px;">Progression Hifz</h3>
+            <p id="hifz-progress-detail" style="font-size: 0.6875rem; color: var(--text-secondary);">0/40 versets maîtrisés (0%)</p>
           </div>
           <div style="width: 80px; height: 8px; background: rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
             <div id="hifz-progress-bar-fill" style="height:100%; width: 0%; background: var(--primary); transition: width 0.4s ease-out;"></div>
@@ -426,8 +526,8 @@
 
         <!-- Juz / Surah context indicator -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 15px; font-weight:600; color: #FFF;">Grille de révision</h3>
-          <span style="font-size: 10px; color: var(--text-muted); font-weight: normal;">Sélectionnez une case pour tester</span>
+          <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF;">Grille de révision</h3>
+          <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: normal;">Sélectionnez une case pour tester</span>
         </div>
         
         <!-- Verse Grid -->
@@ -436,7 +536,7 @@
         </div>
 
         <!-- Grid Legend -->
-        <div class="glass-card" style="padding: 12px; font-size: 10px; display: flex; justify-content: space-around; gap: 8px; color: var(--text-secondary); margin-bottom: 10px;">
+        <div class="glass-card" style="padding: 12px; font-size: 0.625rem; display: flex; justify-content: space-around; gap: 8px; color: var(--text-secondary); margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
             <span style="width:8px; height:8px; background:rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius:20%;"></span> Nouveau
           </div>
@@ -455,38 +555,38 @@
       <!-- ================= VIEW 4: CIRCLE (COMMUNAUTÉ) ================= -->
       <section id="view-circle" class="view">
         <div class="social-header">
-          <h2 style="font-size: 20px; font-weight: 700; color: #FFF;">Mon Cercle Halaqah</h2>
-          <span style="font-size: 11px; color: var(--emerald); font-weight:600; padding: 4px 10px; background: rgba(16, 185, 129, 0.1); border-radius:20px;">
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: #FFF;">Mon Cercle Halaqah</h2>
+          <span style="font-size: 0.6875rem; color: var(--emerald); font-weight:600; padding: 4px 10px; background: rgba(16, 185, 129, 0.1); border-radius:20px;">
             Actif
           </span>
         </div>
 
         <div class="glass-card" style="margin-bottom: 24px; padding: 16px;">
-          <h3 style="font-size: 14px; margin-bottom: 12px; color: var(--primary);">Défi Collectif du Mois</h3>
-          <div style="display:flex; justify-content:space-between; margin-bottom: 6px; font-size:12px; color:var(--text-secondary);">
+          <h3 style="font-size: 0.875rem; margin-bottom: 12px; color: var(--primary);">Défi Collectif du Mois</h3>
+          <div style="display:flex; justify-content:space-between; margin-bottom: 6px; font-size: 0.75rem; color:var(--text-secondary);">
             <span>Lecture complète du Coran</span>
             <span>75% accompli</span>
           </div>
           <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin-bottom:12px;">
             <div style="height:100%; width: 75%; background: linear-gradient(90deg, var(--primary) 0%, var(--emerald) 100%);"></div>
           </div>
-          <p style="font-size:11px; color:var(--text-muted); line-height:1.4;">
+          <p style="font-size: 0.6875rem; color:var(--text-muted); line-height:1.4;">
             Encouragez les membres de votre groupe à terminer leur Wird pour atteindre l'objectif commun !
           </p>
         </div>
 
         <!-- Share Status Card -->
         <div class="glass-card" style="padding: 16px; margin-bottom: 24px; border-left: 3px solid var(--primary);">
-          <h3 style="font-size: 14px; margin-bottom: 10px; color: var(--primary); font-weight: 600;">Partager un message</h3>
+          <h3 style="font-size: 0.875rem; margin-bottom: 10px; color: var(--primary); font-weight: 600;">Partager un message</h3>
           <div style="display: flex; gap: 8px;">
-            <input id="input-circle-post" type="text" placeholder="Partagez une réflexion ou un verset..." style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 8px 12px; color: #FFF; font-size: 13px; outline: none; transition: var(--transition-smooth); font-family: var(--font-ui);">
-            <button id="btn-circle-post" class="btn-action-small" style="background: var(--primary); color: #070913; border: none; padding: 0 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; font-size:12px; transition: var(--transition-smooth);">
+            <input id="input-circle-post" type="text" placeholder="Partagez une réflexion ou un verset..." style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 8px 12px; color: #FFF; font-size: 0.8125rem; outline: none; transition: var(--transition-smooth); font-family: var(--font-ui);">
+            <button id="btn-circle-post" class="btn-action-small" style="background: var(--primary); color: #070913; border: none; padding: 0 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; font-size: 0.75rem; transition: var(--transition-smooth);">
               Partager
             </button>
           </div>
         </div>
 
-        <h3 style="font-size: 15px; font-weight:600; margin-bottom: 14px; color: #FFF;">Activité récente</h3>
+        <h3 style="font-size: 0.9375rem; font-weight:600; margin-bottom: 14px; color: #FFF;">Activité récente</h3>
         <div class="circle-activity-list">
           
           <!-- Activity Item 1 -->
@@ -581,23 +681,23 @@
     <!-- Speech Recording overlay status -->
     <div id="speech-modal" style="display: none; position: absolute; bottom: 85px; left: 20px; right: 20px; background: rgba(13, 17, 30, 0.98); border: 1.5px solid var(--border-active); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); z-index: 60; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 13px; font-weight: 700; color: #FFF; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 0.8125rem; font-weight: 700; color: #FFF; display: flex; align-items: center; gap: 8px;">
           <span class="mic-pulse" style="width: 10px; height: 10px; background: var(--ruby); border-radius: 50%;"></span>
           Récitation à voix haute...
         </span>
-        <button id="btn-speech-close" style="background: none; border: none; color: var(--text-secondary); font-size: 18px; cursor: pointer; line-height:1;">&times;</button>
+        <button id="btn-speech-close" style="background: none; border: none; color: var(--text-secondary); font-size: 1.125rem; cursor: pointer; line-height:1;">&times;</button>
       </div>
-      <div id="speech-transcription" style="font-family: var(--font-quran); font-size: 18px; text-align: right; direction: rtl; color: var(--text-secondary); min-height: 40px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); line-height:1.6;">
+      <div id="speech-transcription" style="font-family: var(--font-quran); font-size: 1.125rem; text-align: right; direction: rtl; color: var(--text-secondary); min-height: 40px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); line-height:1.6;">
         (Parlez maintenant...)
       </div>
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px;">
-        <button id="btn-speech-stop" class="btn-action-small" style="flex: 1; background: rgba(255, 255, 255, 0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size:11px; justify-content:center;">
+        <button id="btn-speech-stop" class="btn-action-small" style="flex: 1; background: rgba(255, 255, 255, 0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; justify-content:center;">
           Annuler
         </button>
-        <button id="btn-speech-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald); color: var(--emerald); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size:11px; font-weight:600; justify-content:center;">
+        <button id="btn-speech-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald); color: var(--emerald); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
           Simuler OK
         </button>
-        <button id="btn-speech-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--ruby); color: var(--ruby); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size:11px; font-weight:600; justify-content:center;">
+        <button id="btn-speech-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--ruby); color: var(--ruby); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
           Simuler Err
         </button>
       </div>
@@ -613,21 +713,21 @@
         
         <!-- Clue 1: Translation -->
         <div style="width:100%;">
-          <div style="font-size: 11px; color: var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 6px;">Indice : Traduction</div>
-          <div id="hifz-card-translation" style="font-size: 15px; font-weight:600; color: #FFF; line-height: 1.5; padding: 0 10px;">
+          <div style="font-size: 0.6875rem; color: var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 6px;">Indice : Traduction</div>
+          <div id="hifz-card-translation" style="font-size: 0.9375rem; font-weight:600; color: #FFF; line-height: 1.5; padding: 0 10px;">
             "Sur quoi s'interrogent-ils mutuellement ?"
           </div>
         </div>
         
         <!-- Clue 2: Transliteration -->
-        <div id="hifz-card-translit" style="font-size: 12px; color: var(--text-secondary); font-style: italic; margin-bottom: 4px;">
+        <div id="hifz-card-translit" style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic; margin-bottom: 4px;">
           ‘Amma yatasā’alūn
         </div>
 
         <!-- The Arabic text placeholder, reveals after validation -->
         <div id="hifz-card-arabic-wrapper" style="width: 100%; min-height: 80px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border: 1.5px dashed var(--border-card); border-radius: var(--radius-md); padding: 14px; transition: var(--transition-smooth);">
-          <span id="hifz-card-placeholder" style="font-size: 12px; color: var(--text-muted); font-style:italic;">Enregistrez votre voix pour valider...</span>
-          <div id="hifz-card-arabic" style="display: none; font-family: var(--font-quran); font-size: 26px; color: #FFF; line-height: 1.8; direction: rtl; text-align:right;">
+          <span id="hifz-card-placeholder" style="font-size: 0.75rem; color: var(--text-muted); font-style:italic;">Enregistrez votre voix pour valider...</span>
+          <div id="hifz-card-arabic" style="display: none; font-family: var(--font-quran); font-size: 1.625rem; color: #FFF; line-height: 1.8; direction: rtl; text-align:right;">
             عَمَّ يَتَسَاءَلُونَ
           </div>
         </div>
@@ -637,13 +737,13 @@
           <button id="hifz-card-mic-btn" style="width: 64px; height: 64px; border-radius: 50%; background: var(--primary); color:#070913; border:none; display:flex; justify-content:center; align-items:center; cursor:pointer; box-shadow: 0 4px 20px var(--primary-glow); transition: var(--transition-bounce); outline:none;">
             <svg style="width:26px;height:26px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
           </button>
-          <div id="hifz-card-recording-status" style="font-size: 11px; color: var(--text-secondary); font-weight:500;">Cliquez pour réciter</div>
+          <div id="hifz-card-recording-status" style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:500;">Cliquez pour réciter</div>
         </div>
 
         <!-- Quick simulation overrides -->
         <div style="display: flex; gap: 8px; width: 100%;">
-          <button id="hifz-card-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--emerald); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size:11px;">Simuler Succès</button>
-          <button id="hifz-card-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--ruby); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size:11px;">Simuler Erreur</button>
+          <button id="hifz-card-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--emerald); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">Simuler Succès</button>
+          <button id="hifz-card-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--ruby); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">Simuler Erreur</button>
         </div>
 
         <!-- SRS Buttons inside Flashcard -->
@@ -695,10 +795,10 @@
         <button id="close-drawer" class="btn-close-drawer">&times;</button>
       </div>
       <div class="tafsir-content">
-        <div id="tafsir-text-ar" class="quran-text-ar" style="font-family: var(--font-quran); font-size: 24px; text-align:right; direction:rtl; margin-bottom: 8px; color:var(--primary);">
+        <div id="tafsir-text-ar" class="quran-text-ar" style="font-family: var(--font-quran); font-size: 1.5rem; text-align:right; direction:rtl; margin-bottom: 8px; color:var(--primary);">
           عَمَّ يَتَسَاءَلُونَ
         </div>
-        <div id="tafsir-text-fr" style="font-size: 13px; font-style:italic; color: var(--text-secondary); margin-bottom: 16px;">
+        <div id="tafsir-text-fr" style="font-size: 0.8125rem; font-style:italic; color: var(--text-secondary); margin-bottom: 16px;">
           "Sur quoi s'interrogent-ils mutuellement ?"
         </div>
         
@@ -708,7 +808,7 @@
         </p>
 
         <h4 style="margin-top: 14px; margin-bottom: 4px;">Asbab an-Nuzul (Cause de la Révélation)</h4>
-        <p id="tafsir-nuzul" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.45; text-align:left; font-style:italic;">
+        <p id="tafsir-nuzul" style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.45; text-align:left; font-style:italic;">
           Non spécifié pour ce verset.
         </p>
 

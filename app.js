@@ -1009,9 +1009,9 @@ document.addEventListener('DOMContentLoaded', () => {
         headerCard.style.textAlign = 'center';
         headerCard.style.borderLeft = '2px solid var(--primary)';
         headerCard.innerHTML = `
-          <div style="font-size:10px; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
-          <div style="font-size: 16px; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
-          <div style="font-size: 11px; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size:14px;">${surah.nameAr}</span></div>
+          <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
+          <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
+          <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
         `;
         quranContainer.appendChild(headerCard);
       }
@@ -1047,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
           arabicHtml = `
             <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
               <span>Afficher le texte arabe</span>
-              <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize}px; color:#FFF; line-height:2;">
+              <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize * (window.__wirdTextScale || 1)}px; color:#FFF; line-height:2;">
                 ${v.textAr}
               </div>
             </div>
@@ -1077,7 +1077,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="verse-text-ar-container">
           ${state.hifzLevel === 4 && state.readerMode === 'memorize' 
             ? arabicHtml 
-            : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
+            : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize * (window.__wirdTextScale || 1)}px">${arabicHtml}</div>`
           }
         </div>
         ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
@@ -1522,7 +1522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!hifzGrid || !hifzProgressDetail || !hifzProgressBarFill || !hifzJuzBadge) return;
 
     hifzJuzBadge.textContent = `Juz ${state.selectedJuz}`;
-    hifzGrid.innerHTML = '<div style="grid-column: span 5; text-align: center; color: var(--text-secondary); padding: 20px; font-size:12px;">Chargement du plan de révision...</div>';
+    hifzGrid.innerHTML = '<div style="grid-column: span 5; text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
 
     if (!state.juzData || state.juzData.juzNumber !== state.selectedJuz) {
       try {
@@ -2178,7 +2178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <p class="activity-text">${val}</p>
         <div class="activity-actions">
-          <span style="font-size: 11px; color: var(--text-muted);">Publié dans votre Halaqah</span>
+          <span style="font-size: 0.6875rem; color: var(--text-muted);">Publié dans votre Halaqah</span>
         </div>
       </div>
     `;
@@ -2252,27 +2252,37 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Font Size
+  // state.arabicFontSize is the user's manual preference at 1x screen scale;
+  // the responsive engine (inline script in index.html <head>) separately
+  // scales the whole app for screen size/density via window.__wirdTextScale.
+  // These two multiply together so a tablet/unfolded-foldable reader still
+  // benefits from the bigger base text while keeping the user's own +/- intact.
+  function applyArabicFontSize() {
+    const px = state.arabicFontSize * (window.__wirdTextScale || 1);
+    document.querySelectorAll('.verse-text-ar, [id^="full-ar-"]').forEach(el => {
+      el.style.fontSize = `${px}px`;
+    });
+  }
+
+  window.addEventListener('wird:scalechange', applyArabicFontSize);
+
   const btnFontDec = document.getElementById('btn-font-dec');
   const btnFontInc = document.getElementById('btn-font-inc');
-  
+
   if (btnFontDec) {
     btnFontDec.addEventListener('click', () => {
       if (state.arabicFontSize > 18) {
         state.arabicFontSize -= 2;
-        document.querySelectorAll('.verse-text-ar').forEach(el => {
-          el.style.fontSize = `${state.arabicFontSize}px`;
-        });
+        applyArabicFontSize();
       }
     });
   }
-  
+
   if (btnFontInc) {
     btnFontInc.addEventListener('click', () => {
       if (state.arabicFontSize < 40) {
         state.arabicFontSize += 2;
-        document.querySelectorAll('.verse-text-ar').forEach(el => {
-          el.style.fontSize = `${state.arabicFontSize}px`;
-        });
+        applyArabicFontSize();
       }
     });
   }
