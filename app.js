@@ -541,31 +541,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Pagination buttons event bindings
     if (btnPrevPage) {
-      btnPrevPage.addEventListener('click', () => {
-        if (state.currentPageIndex > 0) {
-          state.currentPageIndex--;
-          stopAudio();
-          renderQuranText();
-          const pageItems = getVersesOfCurrentPage();
-          if (pageItems.length > 0) {
-            saveReadingPosition(pageItems[0].verse.number);
-          }
-        }
-      });
+      btnPrevPage.addEventListener('click', () => goToPrevPage());
     }
 
     if (btnNextPage) {
-      btnNextPage.addEventListener('click', () => {
-        if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
-          state.currentPageIndex++;
-          stopAudio();
-          renderQuranText();
-          const pageItems = getVersesOfCurrentPage();
-          if (pageItems.length > 0) {
-            saveReadingPosition(pageItems[0].verse.number);
-          }
+      btnNextPage.addEventListener('click', () => goToNextPage());
+    }
+
+    // Swipe navigation on the reader content: swipe right = next page, swipe left = previous page
+    if (quranContainer) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      quranContainer.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      quranContainer.addEventListener('touchend', (e) => {
+        const touchEndX = e.changedTouches[0].screenX;
+        const touchEndY = e.changedTouches[0].screenY;
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+
+        const MIN_SWIPE_DISTANCE = 50;
+        // Ignore mostly-vertical gestures (scrolling)
+        if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+        if (deltaX > 0) {
+          goToNextPage();
+        } else {
+          goToPrevPage();
         }
-      });
+      }, { passive: true });
+    }
+  }
+
+  function goToPrevPage() {
+    if (state.currentPageIndex > 0) {
+      state.currentPageIndex--;
+      stopAudio();
+      renderQuranText(true);
+      const pageItems = getVersesOfCurrentPage();
+      if (pageItems.length > 0) {
+        saveReadingPosition(pageItems[0].verse.number);
+      }
+    }
+  }
+
+  function goToNextPage() {
+    if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
+      state.currentPageIndex++;
+      stopAudio();
+      renderQuranText(true);
+      const pageItems = getVersesOfCurrentPage();
+      if (pageItems.length > 0) {
+        saveReadingPosition(pageItems[0].verse.number);
+      }
     }
   }
 
@@ -859,7 +891,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Render text for Page-by-Page Reader View
-  function renderQuranText() {
+  // preserveIndex: skip re-deriving currentPageIndex from localStorage/scrollToVerseOnLoad
+  // (used when the caller already set state.currentPageIndex explicitly, e.g. pagination buttons/swipe)
+  function renderQuranText(preserveIndex) {
     if (!quranContainer || !state.juzData) return;
     quranContainer.innerHTML = '';
 
@@ -882,18 +916,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = [...new Set(allVerses.map(item => item.verse.page || 582))].sort((a, b) => a - b);
     state.pagesList = pages;
 
-    if (state.scrollToVerseOnLoad) {
-      const targetItem = allVerses.find(item => item.verse.number === state.scrollToVerseOnLoad);
-      if (targetItem && targetItem.verse.page) {
-        state.currentPageIndex = pages.indexOf(targetItem.verse.page);
-        if (state.currentPageIndex === -1) state.currentPageIndex = 0;
-      }
-    } else {
-      const savedPage = localStorage.getItem('wird_last_page');
-      if (savedPage) {
-        const pNum = parseInt(savedPage, 10);
-        state.currentPageIndex = pages.indexOf(pNum);
-        if (state.currentPageIndex === -1) state.currentPageIndex = 0;
+    if (!preserveIndex) {
+      if (state.scrollToVerseOnLoad) {
+        const targetItem = allVerses.find(item => item.verse.number === state.scrollToVerseOnLoad);
+        if (targetItem && targetItem.verse.page) {
+          state.currentPageIndex = pages.indexOf(targetItem.verse.page);
+          if (state.currentPageIndex === -1) state.currentPageIndex = 0;
+        }
+      } else {
+        const savedPage = localStorage.getItem('wird_last_page');
+        if (savedPage) {
+          const pNum = parseInt(savedPage, 10);
+          state.currentPageIndex = pages.indexOf(pNum);
+          if (state.currentPageIndex === -1) state.currentPageIndex = 0;
+        }
       }
     }
 
@@ -1230,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
               const nextIdx = state.pagesList.indexOf(nextVerseObj.page);
               if (nextIdx !== -1) {
                 state.currentPageIndex = nextIdx;
-                renderQuranText();
+                renderQuranText(true);
               }
             }
             playVerse(nextGlobalNum);
