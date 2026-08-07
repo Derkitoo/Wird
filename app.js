@@ -664,8 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pageElems.length === 0) return;
 
     const isMobile = window.innerWidth < 768;
-    const bookWidth = isMobile ? Math.min(window.innerWidth - 28, 430) : 410;
-    const bookHeight = isMobile ? 610 : 640;
+    const bookWidth = isMobile ? Math.min(window.innerWidth - 24, 440) : 480;
+    const bookHeight = isMobile ? Math.min(window.innerHeight - 260, 680) : 740;
 
     try {
       pageFlipInstance = new St.PageFlip(bookElem, {
@@ -673,13 +673,13 @@ document.addEventListener('DOMContentLoaded', () => {
         height: bookHeight,
         size: 'stretch',
         minWidth: 280,
-        maxWidth: 600,
+        maxWidth: 650,
         minHeight: 400,
-        maxHeight: 900,
+        maxHeight: 1000,
         maxShadowOpacity: 0.55,
         showCover: false,
         mobileScrollSupport: false,
-        usePortrait: isMobile,
+        usePortrait: true, // Always 1 single page centered on screen
         startPage: state.currentPageIndex || 0,
         clickEventForward: true
       });
