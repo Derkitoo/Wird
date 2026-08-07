@@ -606,7 +606,7 @@ main::-webkit-scrollbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .surah-info-title {
@@ -854,6 +854,14 @@ main::-webkit-scrollbar {
   padding-bottom: 8px;
   margin-bottom: 10px;
   border-bottom: 1px solid var(--reading-rule);
+}
+
+.mushaf-bismillah {
+  font-family: var(--font-quran);
+  font-size: 22px;
+  text-align: center;
+  color: var(--primary);
+  margin-bottom: 10px;
 }
 
 .mushaf-flow {

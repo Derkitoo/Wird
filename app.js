@@ -605,8 +605,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let pageFlipInstance = null;
+  // True only once pageFlipInstance is actually usable. Book creation is
+  // asynchronous (waits for the loading spinner to clear before measuring
+  // available space), so there's a real window after renderQuranText()
+  // returns where pageFlipInstance is still null — without this flag,
+  // goToNextPage()/goToPrevPage() would treat that as "no page-flip engine
+  // at all" and fall back to a plain index increment + re-render, which
+  // then races the still-pending initial book creation.
+  let pageFlipReady = false;
 
   function initPageFlipEngine() {
+    pageFlipReady = false;
+    updatePagePaginationUI();
+
     const containerElem = document.getElementById('quran-book-container');
     let bookElem = document.getElementById('quran-book');
     if (!bookElem) return;
@@ -634,6 +645,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageElems = bookElem.querySelectorAll('.quran-page-sheet');
     if (pageElems.length === 0) return;
 
+    // This runs synchronously inside renderQuranText(), which itself runs
+    // inside loadJuzData()'s try block — *before* its `finally` hides the
+    // loading spinner (which only happens after an awaited audio-cache
+    // check resolves, not necessarily on the very next tick). Measuring
+    // space while the spinner is still visible counts it as taking up room
+    // above the book, undercounting what's actually available once it's
+    // gone. Poll for the spinner to actually be hidden before measuring.
+    waitForLoaderHidden(() => sizeAndCreatePageFlip(bookElem, containerElem, pageElems));
+  }
+
+  function waitForLoaderHidden(onReady, attempt) {
+    attempt = attempt || 0;
+    const loader = document.getElementById('reader-loader');
+    const stillLoading = loader && getComputedStyle(loader).display !== 'none';
+    if (!stillLoading || attempt >= 50) {
+      onReady();
+      return;
+    }
+    setTimeout(() => waitForLoaderHidden(onReady, attempt + 1), 40);
+  }
+
+  function sizeAndCreatePageFlip(bookElem, containerElem, pageElems) {
     // #app-container is scaled via CSS `zoom` for the responsive system
     // (see index.html <head>), so window.innerWidth/innerHeight are the REAL
     // screen size while this element actually lives in a "local" coordinate
@@ -646,7 +679,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const localVh = window.innerHeight / textScale;
 
     const calcWidth = Math.min(localVw - 24, 600);
-    const calcHeight = Math.min(localVh - 180, 920);
+
+    // How much vertical space is actually left below the controls stacked
+    // above the book, rather than guessing a fixed reservation (which was
+    // often wrong — too little room reserved and the book overflowed
+    // needing a scroll, or too much and it rendered smaller than it could).
+    // getBoundingClientRect()/innerHeight are real (post-zoom) px, so this
+    // whole measurement is done in that space, then converted to the same
+    // local (pre-zoom) coordinate space as calcWidth right at the end.
+    let calcHeight;
+    if (containerElem) {
+      const bottomNav = document.querySelector('.bottom-nav');
+      const navHeight = bottomNav ? bottomNav.getBoundingClientRect().height : 0;
+      const spaceAbove = containerElem.getBoundingClientRect().top;
+      const availableVisual = window.innerHeight - navHeight - spaceAbove - 16;
+      calcHeight = Math.max(300, Math.min(availableVisual / textScale, 940));
+    } else {
+      calcHeight = Math.min(localVh - 180, 920);
+    }
 
     if (containerElem) {
       containerElem.style.maxWidth = `${calcWidth}px`;
@@ -675,6 +725,15 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       pageFlipInstance.loadFromHTML(pageElems);
+      // A short extra settle delay: the very first flipNext()/flipPrev()
+      // call right after loadFromHTML() was silently swallowed in testing
+      // (page-flip's own internal spread/layout setup apparently isn't
+      // fully ready the instant loadFromHTML() returns, even though the
+      // instance itself already exists) — a second click always worked.
+      setTimeout(() => {
+        pageFlipReady = true;
+        updatePagePaginationUI();
+      }, 250);
 
       // The page-sheet frame has a fixed size, but the verse content inside
       // it (Arabic text + translation, however many verses share this page)
@@ -691,9 +750,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // Poll until the sheet's own clientHeight has actually shrunk down to
       // (approximately) the fixed height we configured, confirming the real
       // constraint is in effect, then fit.
-      waitForFixedHeight(pageElems[0], calcHeight, () => {
-        bookElem.querySelectorAll('.quran-page-sheet').forEach(fitPageSheetContent);
-      });
+      // Only the *starting* page here — every other page is fit lazily as it
+      // becomes active (see the 'flip' handler below). Eagerly fitting all
+      // ~23 pages up front (each up to 30 shrink iterations, each forcing a
+      // synchronous layout reflow) is expensive enough that it was still
+      // running right as the first flipNext() call landed, and appears to
+      // have interfered with the library's own internal page-position setup
+      // — flipNext() was being called but the 'flip' event never fired.
+      const startPageIdx = state.currentPageIndex || 0;
+      const startSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${startPageIdx}"]`) || pageElems[0];
+      waitForFixedHeight(startSheet, calcHeight, () => fitPageSheetContent(startSheet));
 
       pageFlipInstance.on('flip', (e) => {
         playPaperRustleSound();
@@ -743,6 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // .verse-text-ar/.verse-text-fr/.verse-text-trans cards.
   function fitPageSheetContent(pageSheet) {
     const flowEls = pageSheet.querySelectorAll('.mushaf-flow');
+    const bismillahEls = pageSheet.querySelectorAll('.mushaf-bismillah');
     const arabicEls = pageSheet.querySelectorAll('.verse-text-ar, [id^="full-ar-"]');
     const frEls = pageSheet.querySelectorAll('.verse-text-fr');
     const transEls = pageSheet.querySelectorAll('.verse-text-trans');
@@ -760,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const apply = () => {
       flowEls.forEach(el => { el.style.fontSize = `${flowSize}px`; });
+      bismillahEls.forEach(el => { el.style.fontSize = `${Math.round(flowSize * 0.85)}px`; });
       arabicEls.forEach(el => { el.style.fontSize = `${arSize}px`; });
       frEls.forEach(el => { el.style.fontSize = `${frSize}px`; });
       transEls.forEach(el => { el.style.fontSize = `${transSize}px`; });
@@ -785,13 +853,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (labelReaderPage) {
       labelReaderPage.textContent = `Page ${state.currentPageIndex + 1}/${pages.length} (Coran P. ${activePageNum})`;
     }
-    if (btnPrevPage) btnPrevPage.disabled = (state.currentPageIndex === 0);
-    if (btnNextPage) btnNextPage.disabled = (state.currentPageIndex === pages.length - 1);
+    // While the page-flip engine is available but still (asynchronously)
+    // initializing, disable navigation rather than let a click fall through
+    // to the plain-render fallback and race the pending book creation. Once
+    // it's confirmed unavailable entirely, that fallback is legitimate.
+    const pageFlipSupported = typeof St !== 'undefined' && typeof St.PageFlip !== 'undefined';
+    const stillInitializing = pageFlipSupported && !pageFlipReady;
+    if (btnPrevPage) btnPrevPage.disabled = stillInitializing || (state.currentPageIndex === 0);
+    if (btnNextPage) btnNextPage.disabled = stillInitializing || (state.currentPageIndex === pages.length - 1);
   }
 
   function goToPrevPage() {
     if (pageFlipInstance) {
-      pageFlipInstance.flipPrev();
+      flipWithRetry('prev');
     } else if (state.currentPageIndex > 0) {
       state.currentPageIndex--;
       stopAudio();
@@ -801,12 +875,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function goToNextPage() {
     if (pageFlipInstance) {
-      pageFlipInstance.flipNext();
+      flipWithRetry('next');
     } else if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
       state.currentPageIndex++;
       stopAudio();
       renderQuranText(true);
     }
+  }
+
+  // pageFlip's own flipPrev() reliably moves *forward* in this config
+  // (confirmed by instrumenting its 'flip' event: calling flipPrev() at
+  // index 2 immediately fired 'flip' with e.data=3, same direction as
+  // flipNext()) — so "previous" goes through the library's lower-level
+  // turnToPage(index) instead, which isn't affected by whatever internal
+  // direction logic flipPrev() has wrong. flipNext() itself is fine.
+  //
+  // Separately, the very first navigation right after the book is created
+  // can silently drop the call — it returns normally but no 'flip' event
+  // ever fires. Retrying once if the page genuinely hasn't changed after a
+  // window comfortably longer than the flip animation works around it
+  // without needing to fully pin down what state inside the (minified,
+  // third-party) library causes it.
+  let pendingFlipRetryTimeout = null;
+
+  function flipWithRetry(direction) {
+    // A leftover retry check from an earlier click must not fire after a
+    // later click has already changed the page — that reads as a spurious
+    // extra flip in whatever direction the stale timer happened to be for.
+    if (pendingFlipRetryTimeout) {
+      clearTimeout(pendingFlipRetryTimeout);
+      pendingFlipRetryTimeout = null;
+    }
+    const startIndex = state.currentPageIndex;
+    if (direction === 'next') pageFlipInstance.flipNext(); else pageFlipInstance.turnToPage(startIndex - 1);
+    pendingFlipRetryTimeout = setTimeout(() => {
+      pendingFlipRetryTimeout = null;
+      if (pageFlipInstance && state.currentPageIndex === startIndex) {
+        if (direction === 'next') pageFlipInstance.flipNext(); else pageFlipInstance.turnToPage(startIndex - 1);
+      }
+    }, 600);
   }
 
   // Calculate pages sum and alert if not equal to 20 pages (1 Juz)
@@ -1098,6 +1205,14 @@ document.addEventListener('DOMContentLoaded', () => {
     checkJuzAudioCacheStatus();
   }
 
+  // Exact Uthmani text of the Bismillah as returned by the API (alquran.cloud,
+  // quran-uthmani edition) — glued onto ayah 1's text for every surah except
+  // Al-Fatiha and At-Tawbah, with no separator between the two. Normalized
+  // (NFC) because the API's combining-mark order for the same visible text
+  // doesn't always match a literal string here byte-for-byte — without this,
+  // startsWith() below silently fails even though the text is identical.
+  const BISMILLAH_AR = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'.normalize('NFC');
+
   // Render text for Page-by-Page Reader View
   // preserveIndex: skip re-deriving currentPageIndex from localStorage/scrollToVerseOnLoad
   // (used when the caller already set state.currentPageIndex explicitly, e.g. pagination buttons/swipe)
@@ -1267,6 +1382,13 @@ document.addEventListener('DOMContentLoaded', () => {
         pageItems.forEach(item => {
           const v = item.verse;
           const surah = item.surah;
+          // The API glues the Bismillah directly onto ayah 1's text with no
+          // separator ("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ عَمَّ يَتَسَآءَلُونَ" as a single
+          // string) for every surah except Al-Fatiha — whose ayah 1 *is* the
+          // Bismillah — and At-Tawbah, which traditionally has none.
+          const normalizedText = v.textAr.normalize('NFC');
+          const hasGluedBismillah = v.numberInSurah === 1 && surah.number !== 1 && surah.number !== 9
+            && normalizedText.startsWith(BISMILLAH_AR);
 
           if (activeSurahHeaderNum !== surah.number) {
             activeSurahHeaderNum = surah.number;
@@ -1276,11 +1398,21 @@ document.addEventListener('DOMContentLoaded', () => {
             header.textContent = `${surah.nameFr} • ${surah.nameAr}`;
             pageSheet.appendChild(header);
 
+            if (hasGluedBismillah) {
+              const bismillahLine = document.createElement('div');
+              bismillahLine.className = 'mushaf-bismillah';
+              bismillahLine.dir = 'rtl';
+              bismillahLine.textContent = BISMILLAH_AR;
+              pageSheet.appendChild(bismillahLine);
+            }
+
             currentFlow = document.createElement('div');
             currentFlow.className = 'mushaf-flow';
             currentFlow.dir = 'rtl';
             pageSheet.appendChild(currentFlow);
           }
+
+          const verseText = hasGluedBismillah ? normalizedText.slice(BISMILLAH_AR.length).trim() : v.textAr;
 
           const verseSpan = document.createElement('span');
           verseSpan.className = 'mushaf-verse';
@@ -1288,7 +1420,7 @@ document.addEventListener('DOMContentLoaded', () => {
           verseSpan.dataset.verseNum = v.number;
           verseSpan.dataset.surahNum = surah.number;
           verseSpan.dataset.audioUrl = v.audio;
-          verseSpan.innerHTML = `${v.textAr} <span class="ayah-marker" data-global-num="${v.number}">${v.numberInSurah}</span> `;
+          verseSpan.innerHTML = `${verseText} <span class="ayah-marker" data-global-num="${v.number}">${v.numberInSurah}</span> `;
           currentFlow.appendChild(verseSpan);
         });
       }
@@ -2300,7 +2432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode !== 'read') cancelPageDwellTracking();
     const readBtn = document.getElementById('switch-read');
     const memoBtn = document.getElementById('switch-memorize');
-    
+
     if (readBtn && memoBtn) {
       if (mode === 'memorize') {
         readBtn.classList.remove('active');
@@ -2309,6 +2441,13 @@ document.addEventListener('DOMContentLoaded', () => {
         readBtn.classList.add('active');
         memoBtn.classList.remove('active');
       }
+    }
+
+    // Lecture mode's dense Mushaf page doesn't render inline translation/
+    // phonetic text, so these toggles have nothing to control there.
+    const displayTogglesCard = document.getElementById('display-toggles-card');
+    if (displayTogglesCard) {
+      displayTogglesCard.style.display = mode === 'memorize' ? 'flex' : 'none';
     }
   }
 

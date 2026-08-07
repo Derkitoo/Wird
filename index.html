@@ -421,8 +421,10 @@
           </div>
         </div>
 
-        <!-- Display Toggles (Translation & Phonetics) -->
-        <div class="glass-card" style="margin: 0 0 14px 0; padding: 10px 14px; display: flex; justify-content: space-around; font-size: 0.6875rem; gap:8px;">
+        <!-- Display Toggles (Translation & Phonetics) — only meaningful in
+             Mémoriser mode; Lecture mode's dense Mushaf page doesn't show
+             inline translation/phonetic text for these to control. -->
+        <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 10px 0; padding: 8px 14px; justify-content: space-around; font-size: 0.6875rem; gap:8px;">
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
             <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
           </label>
@@ -435,17 +437,17 @@
         </div>
 
         <!-- Dropdowns for Juz and Reciter selections -->
-        <div class="reader-selectors-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
-          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
+        <div class="reader-selectors-bar" style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 6px 10px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
-          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 8px 12px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
+          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 6px 10px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
         </div>
 
         <!-- Audio Offline Cache Manager -->
-        <div class="glass-card" style="margin-bottom: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <div class="glass-card" style="margin-bottom: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
           <div style="display:flex; flex-direction:column; gap:2px;">
             <span id="audio-download-status" style="font-size: 0.6875rem; color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
             <span id="audio-download-detail" style="font-size: 0.5625rem; color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
