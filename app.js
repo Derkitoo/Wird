@@ -677,6 +677,35 @@ document.addEventListener('DOMContentLoaded', () => {
       bookElem.style.margin = '0 auto';
     }
 
+    pageElems.forEach(sheet => {
+      let touchStartY = 0;
+      let touchStartX = 0;
+
+      sheet.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+          touchStartY = e.touches[0].clientY;
+          touchStartX = e.touches[0].clientX;
+        }
+      }, { passive: true });
+
+      sheet.addEventListener('touchmove', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
+        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+
+        // Block StPageFlip from hijacking vertical reading scrolling!
+        if (deltaY > deltaX && deltaY > 5) {
+          e.stopPropagation();
+        }
+      }, { passive: false });
+
+      sheet.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.stopPropagation();
+        }
+      }, { passive: true });
+    });
+
     try {
       pageFlipInstance = new St.PageFlip(bookElem, {
         width: calcWidth,
