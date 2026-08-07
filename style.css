@@ -683,6 +683,14 @@ main::-webkit-scrollbar {
   color: var(--reading-text);
 }
 
+/* Every page shares one uniform font size (see computeUniformFlowFontSize
+   in app.js), so a page with fewer verses than the densest one naturally
+   has leftover height in its fixed frame — center its content instead of
+   leaving it pinned to the top with dead space below. */
+.quran-page-sheet {
+  justify-content: center;
+}
+
 .quran-page-sheet::-webkit-scrollbar {
   display: none;
 }

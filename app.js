@@ -707,6 +707,18 @@ document.addEventListener('DOMContentLoaded', () => {
       bookElem.style.margin = '0 auto';
     }
 
+    // Measure every page's natural (auto) height now, while they're still
+    // plain flow children of bookElem — this is the only moment all ~23
+    // are actually laid out and measurable; loadFromHTML() below wraps and
+    // repositions them so only the active one has a real clientHeight
+    // afterwards. Size everything to whichever page needs the most
+    // shrinking, applied uniformly: fitting each page to its own content
+    // independently left every page with a different font size, so
+    // flipping between a sparse and a dense page felt like the whole view
+    // zooming in and out.
+    const uniformFlowSize = computeUniformFlowFontSize(bookElem, calcHeight);
+    applyUniformFlowFontSize(bookElem, uniformFlowSize);
+
     try {
       pageFlipInstance = new St.PageFlip(bookElem, {
         width: calcWidth,
@@ -750,16 +762,21 @@ document.addEventListener('DOMContentLoaded', () => {
       // Poll until the sheet's own clientHeight has actually shrunk down to
       // (approximately) the fixed height we configured, confirming the real
       // constraint is in effect, then fit.
-      // Only the *starting* page here — every other page is fit lazily as it
-      // becomes active (see the 'flip' handler below). Eagerly fitting all
-      // ~23 pages up front (each up to 30 shrink iterations, each forcing a
+      // Mémoriser mode's per-verse cards still need their own per-page fit
+      // (unlike Lecture's uniformly-sized flow above, card content varies
+      // enough per page that a shared size isn't practical) — only the
+      // *starting* page here, every other page is fit lazily as it becomes
+      // active (see the 'flip' handler below). Eagerly fitting all ~23
+      // pages up front (each up to 30 shrink iterations, each forcing a
       // synchronous layout reflow) is expensive enough that it was still
       // running right as the first flipNext() call landed, and appears to
       // have interfered with the library's own internal page-position setup
       // — flipNext() was being called but the 'flip' event never fired.
-      const startPageIdx = state.currentPageIndex || 0;
-      const startSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${startPageIdx}"]`) || pageElems[0];
-      waitForFixedHeight(startSheet, calcHeight, () => fitPageSheetContent(startSheet));
+      if (state.readerMode === 'memorize') {
+        const startPageIdx = state.currentPageIndex || 0;
+        const startSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${startPageIdx}"]`) || pageElems[0];
+        waitForFixedHeight(startSheet, calcHeight, () => fitPageSheetContent(startSheet));
+      }
 
       pageFlipInstance.on('flip', (e) => {
         playPaperRustleSound();
@@ -773,9 +790,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updatePagePaginationUI();
 
-        const activeSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${e.data}"]`);
-        if (activeSheet) {
-          waitForFixedHeight(activeSheet, calcHeight, () => fitPageSheetContent(activeSheet));
+        if (state.readerMode === 'memorize') {
+          const activeSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${e.data}"]`);
+          if (activeSheet) {
+            waitForFixedHeight(activeSheet, calcHeight, () => fitPageSheetContent(activeSheet));
+          }
         }
       });
     } catch (err) {
@@ -804,30 +823,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Shrinks a single page-sheet's text until its content fits within its
   // fixed frame. Sheets that already fit are left untouched (loop just
-  // never runs). Handles both layouts: the dense read-mode .mushaf-flow
-  // (a single flowing block per surah) and the memorize-mode per-verse
-  // .verse-text-ar/.verse-text-fr/.verse-text-trans cards.
+  // never runs). Used for Mémoriser mode's per-verse
+  // .verse-text-ar/.verse-text-fr/.verse-text-trans cards, which vary too
+  // much page to page for one shared size to work well. Lecture mode's
+  // dense .mushaf-flow is sized once, uniformly, for the whole book
+  // instead — see computeUniformFlowFontSize — so every page matches and
+  // flipping between a sparse and a dense page doesn't look like the view
+  // zooming in and out.
   function fitPageSheetContent(pageSheet) {
-    const flowEls = pageSheet.querySelectorAll('.mushaf-flow');
-    const bismillahEls = pageSheet.querySelectorAll('.mushaf-bismillah');
     const arabicEls = pageSheet.querySelectorAll('.verse-text-ar, [id^="full-ar-"]');
     const frEls = pageSheet.querySelectorAll('.verse-text-fr');
     const transEls = pageSheet.querySelectorAll('.verse-text-trans');
-    if (flowEls.length === 0 && arabicEls.length === 0 && frEls.length === 0) return;
+    if (arabicEls.length === 0 && frEls.length === 0) return;
 
-    const MIN_FLOW = 12;
     const MIN_AR = 15;
     const MIN_FR = 10;
     const MIN_TRANS = 9;
 
-    let flowSize = state.arabicFontSize;
     let arSize = state.arabicFontSize;
     let frSize = 13;
     let transSize = 11;
 
     const apply = () => {
-      flowEls.forEach(el => { el.style.fontSize = `${flowSize}px`; });
-      bismillahEls.forEach(el => { el.style.fontSize = `${Math.round(flowSize * 0.85)}px`; });
       arabicEls.forEach(el => { el.style.fontSize = `${arSize}px`; });
       frEls.forEach(el => { el.style.fontSize = `${frSize}px`; });
       transEls.forEach(el => { el.style.fontSize = `${transSize}px`; });
@@ -836,14 +853,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let iterations = 0;
     while (pageSheet.scrollHeight > pageSheet.clientHeight && iterations < 30) {
-      if (flowSize > MIN_FLOW) flowSize -= 1;
-      else if (arSize > MIN_AR) arSize -= 1;
+      if (arSize > MIN_AR) arSize -= 1;
       else if (frSize > MIN_FR) frSize -= 1;
       else if (transSize > MIN_TRANS) transSize -= 1;
       else break;
       apply();
       iterations++;
     }
+  }
+
+  // Finds the single font size that lets *every* Lecture-mode page fit its
+  // fixed frame, and applies it to all of them. Measures each page's
+  // natural (auto, unconstrained) height — only valid right now, before
+  // loadFromHTML() wraps and repositions the pages, at which point only
+  // the active one still reports a real height. Text reflow isn't
+  // perfectly linear with font-size (word-wrap boundaries shift), so the
+  // per-page estimate is biased down slightly rather than risk leaving
+  // that specific page clipped.
+  function computeUniformFlowFontSize(bookElem, targetHeight) {
+    const MIN_FLOW = 12;
+    let uniformSize = state.arabicFontSize;
+
+    bookElem.querySelectorAll('.quran-page-sheet').forEach(sheet => {
+      const naturalHeight = sheet.scrollHeight;
+      if (naturalHeight <= targetHeight) return;
+      const estimated = Math.floor(state.arabicFontSize * (targetHeight / naturalHeight) * 0.95);
+      if (estimated < uniformSize) uniformSize = estimated;
+    });
+
+    return Math.max(MIN_FLOW, Math.min(state.arabicFontSize, uniformSize));
+  }
+
+  function applyUniformFlowFontSize(bookElem, size) {
+    bookElem.querySelectorAll('.mushaf-flow').forEach(el => { el.style.fontSize = `${size}px`; });
+    bookElem.querySelectorAll('.mushaf-bismillah').forEach(el => { el.style.fontSize = `${Math.round(size * 0.85)}px`; });
   }
 
   function updatePagePaginationUI() {
@@ -913,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pageFlipInstance && state.currentPageIndex === startIndex) {
         if (direction === 'next') pageFlipInstance.flipNext(); else pageFlipInstance.turnToPage(startIndex - 1);
       }
-    }, 600);
+    }, 2500);
   }
 
   // Calculate pages sum and alert if not equal to 20 pages (1 Juz)
