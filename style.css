@@ -675,12 +675,10 @@ main::-webkit-scrollbar {
   border: 2px double var(--reading-border);
   border-radius: var(--radius-md);
   box-shadow: var(--reading-shadow);
-  padding: 14px 18px 24px;
+  padding: 14px 18px 20px;
   position: relative;
-  overflow-y: auto;
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  overflow: hidden;
+  touch-action: pan-x;
   box-sizing: border-box;
   color: var(--reading-text);
 }

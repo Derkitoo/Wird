@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isMobile = window.innerWidth < 768;
     const calcWidth = Math.min(window.innerWidth - 24, 460);
-    const calcHeight = Math.min(window.innerHeight - 180, 800);
+    const calcHeight = Math.min(window.innerHeight - 220, 750);
 
     if (containerElem) {
       containerElem.style.maxWidth = `${calcWidth}px`;
@@ -677,35 +677,6 @@ document.addEventListener('DOMContentLoaded', () => {
       bookElem.style.margin = '0 auto';
     }
 
-    pageElems.forEach(sheet => {
-      let touchStartY = 0;
-      let touchStartX = 0;
-
-      sheet.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches.length > 0) {
-          touchStartY = e.touches[0].clientY;
-          touchStartX = e.touches[0].clientX;
-        }
-      }, { passive: true });
-
-      sheet.addEventListener('touchmove', (e) => {
-        if (!e.touches || e.touches.length === 0) return;
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-
-        // Block StPageFlip from hijacking vertical reading scrolling!
-        if (deltaY > deltaX && deltaY > 5) {
-          e.stopPropagation();
-        }
-      }, { passive: false });
-
-      sheet.addEventListener('wheel', (e) => {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-          e.stopPropagation();
-        }
-      }, { passive: true });
-    });
-
     try {
       pageFlipInstance = new St.PageFlip(bookElem, {
         width: calcWidth,
@@ -714,10 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
         minWidth: 280,
         maxWidth: 480,
         minHeight: 400,
-        maxHeight: 950,
+        maxHeight: 900,
         maxShadowOpacity: 0.55,
         showCover: true, // Forces single-page view in StPageFlip!
-        mobileScrollSupport: true, // Allows vertical touch scrolling for reading long content!
+        mobileScrollSupport: false,
         usePortrait: true, // Always 1 single page centered on screen
         startPage: state.currentPageIndex || 0,
         clickEventForward: true
