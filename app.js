@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isMobile = window.innerWidth < 768;
     const calcWidth = Math.min(window.innerWidth - 24, 460);
-    const calcHeight = Math.min(window.innerHeight - 240, 720);
+    const calcHeight = Math.min(window.innerHeight - 180, 800);
 
     if (containerElem) {
       containerElem.style.maxWidth = `${calcWidth}px`;
@@ -685,10 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
         minWidth: 280,
         maxWidth: 480,
         minHeight: 400,
-        maxHeight: 850,
+        maxHeight: 950,
         maxShadowOpacity: 0.55,
         showCover: true, // Forces single-page view in StPageFlip!
-        mobileScrollSupport: false,
+        mobileScrollSupport: true, // Allows vertical touch scrolling for reading long content!
         usePortrait: true, // Always 1 single page centered on screen
         startPage: state.currentPageIndex || 0,
         clickEventForward: true
