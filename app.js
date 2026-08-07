@@ -613,49 +613,124 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function triggerPageTurnAnimation(direction, callback) {
-    if (!quranContainer) {
-      if (callback) callback();
-      return;
+  // Web Audio API Paper Rustle Synthesizer (Zero external audio file needed!)
+  function playPaperRustleSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      const bufferSize = ctx.sampleRate * 0.14; // 140ms sound duration
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1350;
+      filter.Q.value = 1.3;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noise.start();
+    } catch (e) {
+      // Silent catch
     }
-    quranContainer.classList.remove('turn-next', 'turn-prev');
-    void quranContainer.offsetWidth;
-    quranContainer.classList.add(direction === 'next' ? 'turn-next' : 'turn-prev');
+  }
 
-    setTimeout(() => {
-      if (callback) callback();
-    }, 210);
+  let pageFlipInstance = null;
 
-    setTimeout(() => {
-      if (quranContainer) quranContainer.classList.remove('turn-next', 'turn-prev');
-    }, 480);
+  function initPageFlipEngine() {
+    if (pageFlipInstance) {
+      try { pageFlipInstance.destroy(); } catch (e) {}
+      pageFlipInstance = null;
+    }
+
+    const bookElem = document.getElementById('quran-book');
+    if (!bookElem || typeof St === 'undefined' || typeof St.PageFlip === 'undefined') return;
+
+    const pageElems = bookElem.querySelectorAll('.quran-page-sheet');
+    if (pageElems.length === 0) return;
+
+    const isMobile = window.innerWidth < 768;
+    const bookWidth = isMobile ? Math.min(window.innerWidth - 28, 430) : 410;
+    const bookHeight = isMobile ? 610 : 640;
+
+    try {
+      pageFlipInstance = new St.PageFlip(bookElem, {
+        width: bookWidth,
+        height: bookHeight,
+        size: 'stretch',
+        minWidth: 280,
+        maxWidth: 600,
+        minHeight: 400,
+        maxHeight: 900,
+        maxShadowOpacity: 0.55,
+        showCover: false,
+        mobileScrollSupport: false,
+        usePortrait: isMobile,
+        startPage: state.currentPageIndex || 0,
+        clickEventForward: true
+      });
+
+      pageFlipInstance.loadFromHTML(pageElems);
+
+      pageFlipInstance.on('flip', (e) => {
+        playPaperRustleSound();
+        state.currentPageIndex = e.data;
+        const pages = state.pagesList || [];
+        if (pages[state.currentPageIndex]) {
+          const activePageNum = pages[state.currentPageIndex];
+          localStorage.setItem('wird_last_page', activePageNum);
+          localStorage.setItem('wird_last_juz', state.selectedJuz);
+          schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
+        }
+        updatePagePaginationUI();
+      });
+    } catch (err) {
+      console.warn("Failed to initialize StPageFlip Engine:", err);
+    }
+  }
+
+  function updatePagePaginationUI() {
+    const pages = state.pagesList || [];
+    const activePageNum = pages[state.currentPageIndex] || 582;
+    const labelReaderPage = document.getElementById('label-reader-page');
+    if (labelReaderPage) {
+      labelReaderPage.textContent = `Page ${state.currentPageIndex + 1}/${pages.length} (Coran P. ${activePageNum})`;
+    }
+    if (btnPrevPage) btnPrevPage.disabled = (state.currentPageIndex === 0);
+    if (btnNextPage) btnNextPage.disabled = (state.currentPageIndex === pages.length - 1);
   }
 
   function goToPrevPage() {
-    if (state.currentPageIndex > 0) {
-      triggerPageTurnAnimation('prev', () => {
-        state.currentPageIndex--;
-        stopAudio();
-        renderQuranText(true);
-        const pageItems = getVersesOfCurrentPage();
-        if (pageItems.length > 0) {
-          saveReadingPosition(pageItems[0].verse.number);
-        }
-      });
+    if (pageFlipInstance) {
+      pageFlipInstance.flipPrev();
+    } else if (state.currentPageIndex > 0) {
+      state.currentPageIndex--;
+      stopAudio();
+      renderQuranText(true);
     }
   }
 
   function goToNextPage() {
-    if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
-      triggerPageTurnAnimation('next', () => {
-        state.currentPageIndex++;
-        stopAudio();
-        renderQuranText(true);
-        const pageItems = getVersesOfCurrentPage();
-        if (pageItems.length > 0) {
-          saveReadingPosition(pageItems[0].verse.number);
-        }
-      });
+    if (pageFlipInstance) {
+      pageFlipInstance.flipNext();
+    } else if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
+      state.currentPageIndex++;
+      stopAudio();
+      renderQuranText(true);
     }
   }
 
@@ -952,8 +1027,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // preserveIndex: skip re-deriving currentPageIndex from localStorage/scrollToVerseOnLoad
   // (used when the caller already set state.currentPageIndex explicitly, e.g. pagination buttons/swipe)
   function renderQuranText(preserveIndex) {
-    if (!quranContainer || !state.juzData) return;
-    quranContainer.innerHTML = '';
+    if (!state.juzData) return;
+    
+    const bookElem = document.getElementById('quran-book');
+    if (!bookElem) return;
+    bookElem.innerHTML = '';
 
     const allVerses = [];
     state.juzData.surahs.forEach(surah => {
@@ -995,129 +1073,123 @@ document.addEventListener('DOMContentLoaded', () => {
       state.currentPageIndex = 0;
     }
 
-    const activePageNum = pages[state.currentPageIndex];
-    localStorage.setItem('wird_last_page', activePageNum);
-    localStorage.setItem('wird_last_juz', state.selectedJuz);
+    // Populate every page in the Juz as a .quran-page-sheet for StPageFlip
+    pages.forEach((pNum, pIdx) => {
+      const pageSheet = document.createElement('div');
+      pageSheet.className = 'quran-page-sheet';
+      pageSheet.dataset.density = 'soft';
+      pageSheet.dataset.pageIndex = pIdx;
 
-    // Any navigation (buttons, swipe, audio auto-advance) lands here and resets
-    // the dwell timer, so rapid page-flipping never counts as "read".
-    schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
+      const pageItems = allVerses.filter(item => item.verse.page === pNum);
+      let activeSurahHeaderNum = null;
 
-    const pageItems = allVerses.filter(item => item.verse.page === activePageNum);
-
-    // Update pagination labels
-    const labelReaderPage = document.getElementById('label-reader-page');
-    if (labelReaderPage) {
-      labelReaderPage.textContent = `Page ${state.currentPageIndex + 1}/${pages.length} (Coran P. ${activePageNum})`;
-    }
-
-    if (btnPrevPage) btnPrevPage.disabled = (state.currentPageIndex === 0);
-    if (btnNextPage) btnNextPage.disabled = (state.currentPageIndex === pages.length - 1);
-
-    // Render filtered page verses
-    let activeSurahHeaderNum = null;
-
-    pageItems.forEach(item => {
-      const v = item.verse;
-      const surah = item.surah;
-      
-      if (activeSurahHeaderNum !== surah.number) {
-        activeSurahHeaderNum = surah.number;
+      pageItems.forEach(item => {
+        const v = item.verse;
+        const surah = item.surah;
         
-        const headerCard = document.createElement('div');
-        headerCard.className = 'glass-card';
-        headerCard.style.padding = '12px 16px';
-        headerCard.style.marginBottom = '14px';
-        headerCard.style.textAlign = 'center';
-        headerCard.style.borderLeft = '2px solid var(--primary)';
-        headerCard.innerHTML = `
-          <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
-          <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
-          <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
-        `;
-        quranContainer.appendChild(headerCard);
-      }
-
-      const block = document.createElement('div');
-      block.className = 'verse-block';
-      block.id = `verse-${v.number}`;
-      block.dataset.verseNum = v.number;
-      block.dataset.surahNum = surah.number;
-      block.dataset.audioUrl = v.audio;
-
-      const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
-
-      let arabicHtml = '';
-      const words = v.textAr.split(/\s+/);
-      
-      if (state.readerMode === 'memorize') {
-        if (state.hifzLevel === 1) {
-          arabicHtml = v.textAr;
-        } else if (state.hifzLevel === 2) {
-          arabicHtml = words.map((w, idx) => {
-            if (idx === 0) return w;
-            return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
-          }).join(' ');
-        } else if (state.hifzLevel === 3) {
-          arabicHtml = words.map((w, idx) => {
-            if (idx % 2 === 1) {
-              return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
-            }
-            return w;
-          }).join(' ');
-        } else if (state.hifzLevel === 4) {
-          arabicHtml = `
-            <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
-              <span>Afficher le texte arabe</span>
-              <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize}px; color:#FFF; line-height:2;">
-                ${v.textAr}
-              </div>
-            </div>
+        if (activeSurahHeaderNum !== surah.number) {
+          activeSurahHeaderNum = surah.number;
+          
+          const headerCard = document.createElement('div');
+          headerCard.className = 'glass-card';
+          headerCard.style.padding = '12px 16px';
+          headerCard.style.marginBottom = '14px';
+          headerCard.style.textAlign = 'center';
+          headerCard.style.borderLeft = '2px solid var(--primary)';
+          headerCard.innerHTML = `
+            <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
+            <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
+            <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
           `;
+          pageSheet.appendChild(headerCard);
         }
-      } else {
-        arabicHtml = v.textAr;
-      }
 
-      block.innerHTML = `
-        <div class="verse-header-row">
-          <span class="verse-badge">${surah.nameFr} (${v.numberInSurah})</span>
-          <div class="verse-actions">
-            ${state.readerMode === 'memorize' ? `
-              <button class="verse-action-btn record-recitation" title="Valider par ma voix" data-global-num="${v.number}" style="color:var(--text-secondary)">
-                <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-              </button>
-            ` : ''}
-            <button class="verse-action-btn play-verse" title="Écouter" data-global-num="${v.number}">
-              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </button>
-            <button class="verse-action-btn view-tafsir" title="Tafsir" data-global-num="${v.number}">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="verse-text-ar-container">
-          ${state.hifzLevel === 4 && state.readerMode === 'memorize' 
-            ? arabicHtml 
-            : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
-          }
-        </div>
-        ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
-        <div class="verse-text-fr">${v.translation}</div>
+        const block = document.createElement('div');
+        block.className = 'verse-block';
+        block.id = `verse-${v.number}`;
+        block.dataset.verseNum = v.number;
+        block.dataset.surahNum = surah.number;
+        block.dataset.audioUrl = v.audio;
+
+        const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+
+        let arabicHtml = '';
+        const words = v.textAr.split(/\s+/);
         
-        <!-- SRS Rating Panel -->
-        ${state.readerMode === 'memorize' ? `
-          <div class="srs-buttons-row" data-verse-key="${verseKey}">
-            <button class="btn-srs btn-srs-hard" data-rating="hard">🔴 Revoir</button>
-            <button class="btn-srs btn-srs-medium" data-rating="medium">🟡 Moyen</button>
-            <button class="btn-srs btn-srs-easy" data-rating="easy">🟢 Facile</button>
+        if (state.readerMode === 'memorize') {
+          if (state.hifzLevel === 1) {
+            arabicHtml = v.textAr;
+          } else if (state.hifzLevel === 2) {
+            arabicHtml = words.map((w, idx) => {
+              if (idx === 0) return w;
+              return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
+            }).join(' ');
+          } else if (state.hifzLevel === 3) {
+            arabicHtml = words.map((w, idx) => {
+              if (idx % 2 === 1) {
+                return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
+              }
+              return w;
+            }).join(' ');
+          } else if (state.hifzLevel === 4) {
+            arabicHtml = `
+              <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
+                <span>Afficher le texte arabe</span>
+                <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize}px; color:#FFF; line-height:2;">
+                  ${v.textAr}
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          arabicHtml = v.textAr;
+        }
+
+        block.innerHTML = `
+          <div class="verse-header-row">
+            <span class="verse-badge">${surah.nameFr} (${v.numberInSurah})</span>
+            <div class="verse-actions">
+              ${state.readerMode === 'memorize' ? `
+                <button class="verse-action-btn record-recitation" title="Valider par ma voix" data-global-num="${v.number}" style="color:var(--text-secondary)">
+                  <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
+              ` : ''}
+              <button class="verse-action-btn play-verse" title="Écouter" data-global-num="${v.number}">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+              <button class="verse-action-btn view-tafsir" title="Tafsir" data-global-num="${v.number}">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              </button>
+            </div>
           </div>
-        ` : ''}
-      `;
-      quranContainer.appendChild(block);
+          <div class="verse-text-ar-container">
+            ${state.hifzLevel === 4 && state.readerMode === 'memorize' 
+              ? arabicHtml 
+              : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
+            }
+          </div>
+          ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
+          <div class="verse-text-fr">${v.translation}</div>
+          
+          <!-- SRS Rating Panel -->
+          ${state.readerMode === 'memorize' ? `
+            <div class="srs-buttons-row" data-verse-key="${verseKey}">
+              <button class="btn-srs btn-srs-hard" data-rating="hard">🔴 Revoir</button>
+              <button class="btn-srs btn-srs-medium" data-rating="medium">🟡 Moyen</button>
+              <button class="btn-srs btn-srs-easy" data-rating="easy">🟢 Facile</button>
+            </div>
+          ` : ''}
+        `;
+        pageSheet.appendChild(block);
+      });
+
+      bookElem.appendChild(pageSheet);
     });
 
     setupVerseInteractions();
+    updatePagePaginationUI();
+    initPageFlipEngine();
+
     refreshDisplayLanguages();
 
     // Scroll to target verse on load if requested
@@ -1138,8 +1210,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Setup click interactions for rendered verses
   function setupVerseInteractions() {
-    if (!quranContainer) return;
-    const blocks = quranContainer.querySelectorAll('.verse-block');
+    const targetParent = document.getElementById('quran-book') || quranContainer;
+    if (!targetParent) return;
+    const blocks = targetParent.querySelectorAll('.verse-block');
     blocks.forEach(block => {
       // 1. Play button
       const playBtn = block.querySelector('.play-verse');

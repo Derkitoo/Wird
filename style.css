@@ -650,23 +650,45 @@ main::-webkit-scrollbar {
   color: #070913;
 }
 
-/* Skeuomorphic iOS UIPageViewController Page Curl & Paper Fold Effect */
-#view-reader {
-  perspective: 1600px;
-  perspective-origin: center center;
+/* StPageFlip 3D Book Layout & Page Sheets */
+#quran-book-container {
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+#quran-book {
+  margin: 0 auto;
+}
+
+.quran-page-sheet,
 #quran-container.quran-render-container {
   display: flex;
   flex-direction: column;
   background: linear-gradient(165deg, var(--reading-bg-a), var(--reading-bg-b));
   border: 2px double var(--reading-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   box-shadow: var(--reading-shadow);
   padding: 14px 20px 18px;
   position: relative;
-  transform-style: preserve-3d;
-  overflow: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  color: var(--reading-text);
+}
+
+.quran-page-sheet::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid color-mix(in srgb, var(--reading-border) 35%, transparent);
+  border-radius: calc(var(--radius-md) - 4px);
+  pointer-events: none;
 }
 
 /* Authentic Central Spine Crease for bound Mushaf pages */

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wird - Votre Compagnon Coranique Quotidien</title>
   <meta name="description" content="Une application moderne et spirituelle pour lire, comprendre et mémoriser le Coran au quotidien.">
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   <script>
     (function(){
       try {
@@ -481,9 +482,13 @@
           <span style="font-size: 0.8125rem; font-weight: 500; letter-spacing: 0.5px;">Chargement du Wird coranique...</span>
         </div>
 
-        <!-- Rendered Quran Content (Populated by JS) -->
-        <div id="quran-container" class="quran-render-container">
-          <!-- Populated from api.js or fallback -->
+        <!-- Rendered Quran Content (StPageFlip 3D Book Container) -->
+        <div id="quran-book-container" style="width: 100%; min-height: 520px; display: flex; justify-content: center; align-items: center; position: relative;">
+          <div id="quran-book">
+            <div id="quran-container" class="quran-render-container">
+              <!-- Populated from api.js or fallback -->
+            </div>
+          </div>
         </div>
 
         <!-- Page Pagination controls -->
