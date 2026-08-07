@@ -2484,6 +2484,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsClose = document.getElementById('settings-close');
   const btnThemeLight = document.getElementById('btn-theme-light');
   const btnThemeDark = document.getElementById('btn-theme-dark');
+  const btnThemeSepia = document.getElementById('btn-theme-sepia');
   const paletteSwatches = document.querySelectorAll('.palette-swatch');
 
   state.theme = localStorage.getItem('wird_theme') || 'dark';
@@ -2495,16 +2496,16 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('wird_theme', state.theme);
     localStorage.setItem('wird_palette', state.palette);
 
-    if (btnThemeLight && btnThemeDark) {
-      btnThemeLight.classList.toggle('active', state.theme === 'light');
-      btnThemeDark.classList.toggle('active', state.theme === 'dark');
-    }
+    if (btnThemeLight) btnThemeLight.classList.toggle('active', state.theme === 'light');
+    if (btnThemeDark) btnThemeDark.classList.toggle('active', state.theme === 'dark');
+    if (btnThemeSepia) btnThemeSepia.classList.toggle('active', state.theme === 'sepia');
+
     paletteSwatches.forEach(sw => {
       sw.classList.toggle('active', sw.dataset.palette === state.palette);
     });
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) metaTheme.setAttribute('content', state.theme === 'light' ? '#f2efe9' : '#070913');
+    if (metaTheme) metaTheme.setAttribute('content', state.theme === 'light' ? '#f2efe9' : state.theme === 'sepia' ? '#E8DACB' : '#070913');
   }
 
   function openSettingsDrawer() {
@@ -2522,10 +2523,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnOpenSettings) btnOpenSettings.addEventListener('click', openSettingsDrawer);
   if (settingsClose) settingsClose.addEventListener('click', closeSettingsDrawer);
-  if (btnThemeLight) btnThemeLight.addEventListener('click', () => { state.theme = 'light'; applyTheme(); });
-  if (btnThemeDark) btnThemeDark.addEventListener('click', () => { state.theme = 'dark'; applyTheme(); });
+  
+  if (btnThemeLight) btnThemeLight.addEventListener('click', () => { state.theme = 'light'; applyTheme(); showToast("Mode Clair ☀️", "Thème lumineux appliqué."); });
+  if (btnThemeDark) btnThemeDark.addEventListener('click', () => { state.theme = 'dark'; applyTheme(); showToast("Mode Sombre 🌙", "Thème sombre appliqué."); });
+  if (btnThemeSepia) btnThemeSepia.addEventListener('click', () => { state.theme = 'sepia'; applyTheme(); showToast("Mode Parchemin 📜", "Thème manuscrit doux appliqué."); });
+  
   paletteSwatches.forEach(sw => {
-    sw.addEventListener('click', () => { state.palette = sw.dataset.palette; applyTheme(); });
+    sw.addEventListener('click', () => { 
+      state.palette = sw.dataset.palette; 
+      applyTheme(); 
+      const paletteNames = { gold: 'Or', emerald: 'Émeraude', sapphire: 'Saphir', rose: 'Rose', violet: 'Violet', amber: 'Ambre' };
+      showToast("Couleur d'accentuation 🎨", `Palette ${paletteNames[state.palette] || state.palette} appliquée.`);
+    });
   });
 
   applyTheme();
