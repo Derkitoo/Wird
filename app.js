@@ -1313,6 +1313,14 @@ document.addEventListener('DOMContentLoaded', () => {
       pageSheet.dataset.density = 'soft';
       pageSheet.dataset.pageIndex = pIdx;
 
+      // StPageFlip sets `display: block` inline on pageSheet itself once it
+      // takes it over (overriding the CSS flex/justify-content used to
+      // vertically center content), so centering has to happen on an inner
+      // wrapper the library never touches instead.
+      const pageInner = document.createElement('div');
+      pageInner.className = 'quran-page-inner';
+      pageSheet.appendChild(pageInner);
+
       const pageItems = allVerses.filter(item => item.verse.page === pNum);
 
       if (state.readerMode === 'memorize') {
@@ -1339,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
               <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
             `;
-            pageSheet.appendChild(headerCard);
+            pageInner.appendChild(headerCard);
           }
 
           const block = document.createElement('div');
@@ -1409,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn-srs btn-srs-easy" data-rating="easy">🟢 Facile</button>
             </div>
           `;
-          pageSheet.appendChild(block);
+          pageInner.appendChild(block);
         });
       } else {
         // Read mode: a dense, continuous Mushaf-style page — just the Arabic
@@ -1439,20 +1447,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const header = document.createElement('div');
             header.className = 'mushaf-surah-header';
             header.textContent = `${surah.nameFr} • ${surah.nameAr}`;
-            pageSheet.appendChild(header);
+            pageInner.appendChild(header);
 
             if (hasGluedBismillah) {
               const bismillahLine = document.createElement('div');
               bismillahLine.className = 'mushaf-bismillah';
               bismillahLine.dir = 'rtl';
               bismillahLine.textContent = BISMILLAH_AR;
-              pageSheet.appendChild(bismillahLine);
+              pageInner.appendChild(bismillahLine);
             }
 
             currentFlow = document.createElement('div');
             currentFlow.className = 'mushaf-flow';
             currentFlow.dir = 'rtl';
-            pageSheet.appendChild(currentFlow);
+            pageInner.appendChild(currentFlow);
           }
 
           const verseText = hasGluedBismillah ? normalizedText.slice(BISMILLAH_AR.length).trim() : v.textAr;

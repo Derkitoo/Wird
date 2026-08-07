@@ -686,9 +686,16 @@ main::-webkit-scrollbar {
 /* Every page shares one uniform font size (see computeUniformFlowFontSize
    in app.js), so a page with fewer verses than the densest one naturally
    has leftover height in its fixed frame — center its content instead of
-   leaving it pinned to the top with dead space below. */
-.quran-page-sheet {
+   leaving it pinned to the top with dead space below.
+   This centering lives on an inner wrapper (.quran-page-inner), not
+   .quran-page-sheet itself: StPageFlip sets `display: block` inline on
+   the sheet once it takes it over, which silently overrides the CSS flex
+   display above and makes justify-content on the sheet a no-op. */
+.quran-page-inner {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
+  height: 100%;
 }
 
 .quran-page-sheet::-webkit-scrollbar {
