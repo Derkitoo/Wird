@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     audioLoopRepetitions: '1', // '1', '3', '5', 'infinite'
     audioPlayCount: 1,
     readerMode: 'read', // 'read' or 'memorize' (used in Reader view only)
-    hifzLevel: 1, // 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
+    hifzLevel: 'auto', // 'auto' (per-verse, driven by SRS status), or 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
     arabicFontSize: 26, // default in px
     encouragedActivities: new Set(),
     // SRS Database for memorized verses schedule
@@ -76,6 +76,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // review, walked one at a time via the flashcard, across any Juz.
     reviewQueue: [],
     reviewSessionActive: false,
+    // Hifz gamification: XP earned from every SRS rating (any surface), and
+    // a per-day activity log used to compute the current streak.
+    hifzXp: 0,
+    hifzStreakHistory: {},
     // Wird custom planner (total = 20 pages for 1 Juz)
     wirdPagePlan: {
       fajr: 4,
@@ -154,9 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Hifz Refactored Workshop elements (view-memorize)
   const hifzJuzBadge = document.getElementById('hifz-juz-badge');
-  const hifzProgressDetail = document.getElementById('hifz-progress-detail');
-  const hifzProgressBarFill = document.getElementById('hifz-progress-bar-fill');
-  const hifzGrid = document.getElementById('hifz-grid');
+  const hifzSurahList = document.getElementById('hifz-surah-list');
   const hifzDueDetail = document.getElementById('hifz-due-detail');
   const btnHifzStartSession = document.getElementById('btn-hifz-start-session');
 
@@ -244,6 +246,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedSRS) state.srsDatabase = JSON.parse(savedSRS);
   } catch (err) {
     console.warn("Failed to parse wird_srs_database", err);
+  }
+
+  const savedHifzXp = localStorage.getItem('wird_hifz_xp');
+  if (savedHifzXp) state.hifzXp = parseInt(savedHifzXp, 10) || 0;
+
+  try {
+    const savedHifzStreak = localStorage.getItem('wird_hifz_streak_history');
+    if (savedHifzStreak) state.hifzStreakHistory = JSON.parse(savedHifzStreak);
+  } catch (err) {
+    console.warn("Failed to parse wird_hifz_streak_history", err);
   }
 
   try {
@@ -344,20 +356,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Hifz levels click listeners (Reader view only)
-    for (let i = 1; i <= 4; i++) {
-      const btn = document.getElementById(`hifz-btn-level${i}`);
-      if (btn) {
-        btn.addEventListener('click', () => {
-          for (let j = 1; j <= 4; j++) {
-            document.getElementById(`hifz-btn-level${j}`).classList.remove('active');
-          }
-          btn.classList.add('active');
-          state.hifzLevel = i;
-          renderQuranText();
-        });
-      }
-    }
+    // Hifz levels click listeners (Reader view only) — "Auto" adapts each
+    // verse's masking to its own SRS status instead of one level applied to
+    // every verse on the page (see computeAutoHifzLevel).
+    document.querySelectorAll('#hifz-toolbar [data-hifz-level]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#hifz-toolbar [data-hifz-level]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const level = btn.dataset.hifzLevel;
+        state.hifzLevel = level === 'auto' ? 'auto' : parseInt(level, 10);
+        renderQuranText();
+      });
+    });
 
     // Audio loop change listener
     if (selectAudioLoop) {
@@ -1043,25 +1053,26 @@ document.addEventListener('DOMContentLoaded', () => {
           block.dataset.audioUrl = v.audio;
 
           const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+          const effectiveLevel = state.hifzLevel === 'auto' ? computeAutoHifzLevel(verseKey) : state.hifzLevel;
 
           let arabicHtml = '';
           const words = v.textAr.split(/\s+/);
 
-          if (state.hifzLevel === 1) {
+          if (effectiveLevel === 1) {
             arabicHtml = v.textAr;
-          } else if (state.hifzLevel === 2) {
+          } else if (effectiveLevel === 2) {
             arabicHtml = words.map((w, idx) => {
               if (idx === 0) return w;
               return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
             }).join(' ');
-          } else if (state.hifzLevel === 3) {
+          } else if (effectiveLevel === 3) {
             arabicHtml = words.map((w, idx) => {
               if (idx % 2 === 1) {
                 return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
               }
               return w;
             }).join(' ');
-          } else if (state.hifzLevel === 4) {
+          } else if (effectiveLevel === 4) {
             arabicHtml = `
               <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
                 <span>Afficher le texte arabe</span>
@@ -1088,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
             <div class="verse-text-ar-container">
-              ${state.hifzLevel === 4
+              ${effectiveLevel === 4
                 ? arabicHtml
                 : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
               }
@@ -1466,6 +1477,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return { scorePct, passed: scorePct >= 70 };
   }
 
+  // "Auto" masking mode: derive how much help a verse gets from its own SRS
+  // record instead of applying one level to every verse on the page — never
+  // tested or rated hard gets full support, rated easy gets tested hardest.
+  function computeAutoHifzLevel(verseKey) {
+    const record = state.srsDatabase[verseKey];
+    if (!record) return 1;
+    if (record.difficulty === 'hard') return 1;
+    if (record.difficulty === 'medium') return 2;
+    return 4; // easy
+  }
+
   // Persists an SRS rating and schedules the next review date — shared by
   // the reader's per-verse SRS buttons, the Hifz flashcard's SRS buttons,
   // and the automatic pass/fail write after a voice check.
@@ -1479,6 +1501,161 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: Date.now()
     };
     localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
+
+    // Every SRS rating, from any surface (reader cards, voice check, Hifz
+    // flashcard), counts as one practice rep — reward attempts, not just
+    // success, so the streak/XP system doesn't punish honest self-rating.
+    const xpRewards = { hard: 5, medium: 10, easy: 15 };
+    awardHifzXp(xpRewards[rating] || 5);
+  }
+
+  // ==================== HIFZ GAMIFICATION ====================
+
+  const HIFZ_XP_PER_LEVEL = 100;
+
+  function getHifzLevelInfo() {
+    const level = Math.floor(state.hifzXp / HIFZ_XP_PER_LEVEL) + 1;
+    const xpIntoLevel = state.hifzXp % HIFZ_XP_PER_LEVEL;
+    return { level, xpIntoLevel, xpForLevel: HIFZ_XP_PER_LEVEL };
+  }
+
+  // Consecutive days (ending today, or ending yesterday if today has no
+  // activity yet) found in hifzStreakHistory.
+  function computeHifzStreak() {
+    let streak = 0;
+    const cursor = new Date();
+    const todayStr = cursor.toISOString().split('T')[0];
+    if (!state.hifzStreakHistory[todayStr]) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    while (true) {
+      const dStr = cursor.toISOString().split('T')[0];
+      if (state.hifzStreakHistory[dStr]) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  function markHifzActivityToday() {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!state.hifzStreakHistory[todayStr]) {
+      state.hifzStreakHistory[todayStr] = true;
+      localStorage.setItem('wird_hifz_streak_history', JSON.stringify(state.hifzStreakHistory));
+    }
+  }
+
+  function awardHifzXp(amount) {
+    state.hifzXp += amount;
+    localStorage.setItem('wird_hifz_xp', state.hifzXp);
+    markHifzActivityToday();
+    updateHifzGamificationUI();
+  }
+
+  const HIFZ_BADGES = [
+    { icon: '🌱', label: 'Premier pas', check: (m, streak) => m.totalTested >= 1 },
+    { icon: '📿', label: '10 versets', check: (m, streak) => m.masteredGlobal >= 10 },
+    { icon: '🕌', label: '50 versets', check: (m, streak) => m.masteredGlobal >= 50 },
+    { icon: '🔥', label: '3 jours', check: (m, streak) => streak >= 3 },
+    { icon: '⚡', label: '7 jours', check: (m, streak) => streak >= 7 },
+    { icon: '👑', label: '30 jours', check: (m, streak) => streak >= 30 }
+  ];
+
+  function renderHifzBadges() {
+    const container = document.getElementById('hifz-badges-row');
+    if (!container) return;
+    const streak = computeHifzStreak();
+    const masteredGlobal = Object.values(state.srsDatabase).filter(r => r.difficulty === 'easy').length;
+    const totalTested = Object.keys(state.srsDatabase).length;
+    const metrics = { masteredGlobal, totalTested };
+
+    container.innerHTML = '';
+    HIFZ_BADGES.forEach(b => {
+      const earned = b.check(metrics, streak);
+      const el = document.createElement('div');
+      el.className = 'hifz-badge' + (earned ? ' earned' : '');
+      el.title = b.label;
+      el.innerHTML = `<span class="hifz-badge-icon">${b.icon}</span><span class="hifz-badge-label">${b.label}</span>`;
+      container.appendChild(el);
+    });
+  }
+
+  // Refreshes every gamification display currently in the DOM (Atelier
+  // stats bar + badges, and the reader's compact mini-chip if present).
+  function updateHifzGamificationUI() {
+    const streak = computeHifzStreak();
+    const { level, xpIntoLevel, xpForLevel } = getHifzLevelInfo();
+
+    document.querySelectorAll('.hifz-streak-value').forEach(el => { el.textContent = streak; });
+    document.querySelectorAll('.hifz-level-value').forEach(el => { el.textContent = level; });
+    document.querySelectorAll('.hifz-xp-bar-fill').forEach(el => {
+      el.style.width = `${Math.round((xpIntoLevel / xpForLevel) * 100)}%`;
+    });
+    document.querySelectorAll('.hifz-xp-detail').forEach(el => {
+      el.textContent = `${xpIntoLevel}/${xpForLevel} XP`;
+    });
+
+    renderHifzBadges();
+  }
+
+  // Starts a focused practice session on a single surah — every verse in
+  // it, verses not yet mastered first — rather than only what's due today.
+  function startSurahPracticeSession(surahNum, juzNum) {
+    if (!state.juzData) return;
+    const surah = state.juzData.surahs.find(s => s.number === surahNum);
+    if (!surah) return;
+
+    const keys = surah.verses.map(v => `juz_${juzNum}_surah_${surahNum}_verse_${v.numberInSurah}`);
+    keys.sort((a, b) => {
+      const ra = state.srsDatabase[a];
+      const rb = state.srsDatabase[b];
+      const masteredA = ra && ra.difficulty === 'easy' ? 1 : 0;
+      const masteredB = rb && rb.difficulty === 'easy' ? 1 : 0;
+      return masteredA - masteredB;
+    });
+
+    state.reviewQueue = keys;
+    state.reviewSessionActive = true;
+    switchView('memorize');
+    advanceReviewSession();
+  }
+
+  // Renders one progress card per surah in the selected Juz, replacing the
+  // old flat 564-cell number grid — tapping a card starts a focused
+  // practice session on that surah instead of testing one verse at a time.
+  function renderHifzSurahCards() {
+    const container = document.getElementById('hifz-surah-list');
+    if (!container || !state.juzData) return;
+
+    container.innerHTML = '';
+    state.juzData.surahs.forEach(surah => {
+      const total = surah.verses.length;
+      let mastered = 0;
+      surah.verses.forEach(v => {
+        const key = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+        const record = state.srsDatabase[key];
+        if (record && record.difficulty === 'easy') mastered++;
+      });
+      const pct = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+      const card = document.createElement('div');
+      card.className = 'hifz-surah-card';
+      card.style.setProperty('--pct', pct);
+      card.innerHTML = `
+        <div class="hifz-surah-card-ring"><span>${pct}%</span></div>
+        <div class="hifz-surah-card-info">
+          <div class="hifz-surah-card-name">${surah.nameFr}</div>
+          <div class="hifz-surah-card-ar">${surah.nameAr}</div>
+          <div class="hifz-surah-card-detail">${mastered}/${total} versets maîtrisés</div>
+        </div>
+        <button class="hifz-surah-card-play" aria-label="Pratiquer cette sourate">▶</button>
+      `;
+      card.addEventListener('click', () => startSurahPracticeSession(surah.number, state.selectedJuz));
+      container.appendChild(card);
+    });
   }
 
   // Wraps SpeechRecognition setup/teardown so the reader's inline recitation
@@ -1717,11 +1894,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load and Render the visual Hifz Dashboard Grid (view-memorize)
   async function loadHifzDashboard() {
-    if (!hifzGrid || !hifzProgressDetail || !hifzProgressBarFill || !hifzJuzBadge) return;
+    if (!hifzSurahList || !hifzJuzBadge) return;
 
     hifzJuzBadge.textContent = `Juz ${state.selectedJuz}`;
-    hifzGrid.innerHTML = '<div style="grid-column: span 5; text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
+    hifzSurahList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
     updateHifzDueSummary();
+    updateHifzGamificationUI();
 
     if (!state.juzData || state.juzData.juzNumber !== state.selectedJuz) {
       try {
@@ -1746,58 +1924,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const allVerses = [];
-    state.juzData.surahs.forEach(surah => {
-      surah.verses.forEach(v => {
-        allVerses.push({
-          verse: v,
-          surah: surah
-        });
-      });
-    });
-
-    let masteredCount = 0;
-    allVerses.forEach(item => {
-      const key = `juz_${state.selectedJuz}_surah_${item.surah.number}_verse_${item.verse.numberInSurah}`;
-      const record = state.srsDatabase[key];
-      if (record && record.difficulty === 'easy') {
-        masteredCount++;
-      }
-    });
-
-    const percent = allVerses.length > 0 ? Math.round((masteredCount / allVerses.length) * 100) : 0;
-    hifzProgressDetail.textContent = `${masteredCount}/${allVerses.length} versets acquis (${percent}%)`;
-    hifzProgressBarFill.style.width = `${percent}%`;
-
-    const now = Date.now();
-    hifzGrid.innerHTML = '';
-    allVerses.forEach((item, index) => {
-      const v = item.verse;
-      const surah = item.surah;
-      const key = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
-
-      const gridItem = document.createElement('div');
-      gridItem.className = 'hifz-grid-item';
-
-      gridItem.textContent = index + 1;
-      gridItem.title = `${surah.nameFr} (V. ${v.numberInSurah})`;
-
-      const record = state.srsDatabase[key];
-      if (record) {
-        if (record.difficulty === 'hard') gridItem.classList.add('srs-hard');
-        else if (record.difficulty === 'medium') gridItem.classList.add('srs-medium');
-        else if (record.difficulty === 'easy') gridItem.classList.add('srs-easy');
-        if (record.nextReviewDate <= now) gridItem.classList.add('srs-due');
-      } else {
-        gridItem.classList.add('srs-none');
-      }
-
-      gridItem.addEventListener('click', () => {
-        openHifzFlashcard(v, surah, state.selectedJuz, `Sourate ${surah.number}:${v.numberInSurah}`);
-      });
-
-      hifzGrid.appendChild(gridItem);
-    });
+    renderHifzSurahCards();
   }
 
   // Global count of verses due for review right now, across every Juz —
@@ -2300,6 +2427,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (displayTogglesCard) {
       displayTogglesCard.style.display = mode === 'memorize' ? 'flex' : 'none';
     }
+
+    if (mode === 'memorize') updateHifzGamificationUI();
   }
 
   const readBtn = document.getElementById('switch-read');

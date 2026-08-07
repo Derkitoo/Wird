@@ -461,13 +461,18 @@
 
         <!-- Memorization (Hifz) Assistance toolbar -->
         <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 12px; border-radius: var(--radius-lg);">
+          <div class="hifz-mini-stats">
+            <span class="hifz-mini-stat">🔥 <span class="hifz-streak-value">0</span> j</span>
+            <span class="hifz-mini-stat">⭐ Niv. <span class="hifz-level-value">1</span></span>
+          </div>
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
             <span style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
             <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
-              <button class="switch-btn active" id="hifz-btn-level1" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Complet</button>
-              <button class="switch-btn" id="hifz-btn-level2" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">1er Mot</button>
-              <button class="switch-btn" id="hifz-btn-level3" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Troué</button>
-              <button class="switch-btn" id="hifz-btn-level4" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Masqué</button>
+              <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">🎯 Auto</button>
+              <button class="switch-btn" data-hifz-level="1" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Complet</button>
+              <button class="switch-btn" data-hifz-level="2" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">1er Mot</button>
+              <button class="switch-btn" data-hifz-level="3" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Troué</button>
+              <button class="switch-btn" data-hifz-level="4" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Masqué</button>
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 4px;">
@@ -511,57 +516,43 @@
           </span>
         </div>
 
+        <!-- Gamified stats bar: streak + level/XP -->
+        <div class="hifz-stats-bar">
+          <div class="hifz-stat-chip hifz-stat-chip-streak">
+            <span class="hifz-stat-icon">🔥</span>
+            <span class="hifz-streak-value">0</span>
+            <span class="hifz-stat-label">jours</span>
+          </div>
+          <div class="hifz-stat-chip hifz-stat-chip-xp">
+            <span class="hifz-level-badge">Niv. <span class="hifz-level-value">1</span></span>
+            <div class="hifz-xp-bar-track"><div class="hifz-xp-bar-fill" style="width:0%"></div></div>
+            <span class="hifz-xp-detail">0/100 XP</span>
+          </div>
+        </div>
+
         <!-- Review session CTA — the actual entry point into a guided, cross-Juz
              review of every verse currently due, one flashcard after another. -->
-        <div class="glass-card" style="margin-bottom: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-left: 3px solid var(--primary);">
+        <div class="hifz-hero-card">
           <div>
-            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 2px;">Révision du jour</h3>
-            <p id="hifz-due-detail" style="font-size: 0.6875rem; color: var(--text-secondary);">0 verset à réviser</p>
+            <h3>Révision du jour</h3>
+            <p id="hifz-due-detail">0 verset à réviser</p>
           </div>
-          <button id="btn-hifz-start-session" class="btn-action-small" style="width:auto; padding: 10px 16px; background: var(--primary); color: #070913; border: none; border-radius: var(--radius-md); font-weight:700; font-size: 0.75rem; justify-content:center; cursor:pointer;">
-            Réviser ▶
-          </button>
+          <button id="btn-hifz-start-session" class="hifz-hero-btn">Réviser ▶</button>
         </div>
 
-        <!-- Hifz Stats summary card (mastery within the selected Juz) -->
-        <div class="glass-card" style="margin-bottom: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-          <div>
-            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 4px;">Progression Hifz — Juz sélectionné</h3>
-            <p id="hifz-progress-detail" style="font-size: 0.6875rem; color: var(--text-secondary);">0/40 versets maîtrisés (0%)</p>
-          </div>
-          <div style="width: 80px; height: 8px; background: rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
-            <div id="hifz-progress-bar-fill" style="height:100%; width: 0%; background: var(--primary); transition: width 0.4s ease-out;"></div>
-          </div>
-        </div>
-
-        <!-- Juz / Surah context indicator -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF;">Grille du Juz sélectionné</h3>
-          <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: normal;">Sélectionnez une case pour tester</span>
-        </div>
-
-        <!-- Verse Grid -->
-        <div id="hifz-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px;">
+        <!-- Badges / achievements -->
+        <div id="hifz-badges-row" class="hifz-badges-row">
           <!-- Populated by JS -->
         </div>
 
-        <!-- Grid Legend -->
-        <div class="glass-card" style="padding: 12px; font-size: 0.625rem; display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; color: var(--text-secondary); margin-bottom: 10px;">
-          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span style="width:8px; height:8px; background:rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius:20%;"></span> Nouveau
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span style="width:8px; height:8px; background:rgba(239, 68, 68, 0.2); border: 1px solid var(--ruby); border-radius:20%;"></span> Revoir
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span style="width:8px; height:8px; background:rgba(59, 130, 246, 0.2); border: 1px solid var(--sapphire); border-radius:20%;"></span> Moyen
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.2); border: 1px solid var(--emerald); border-radius:20%;"></span> Acquis
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span class="hifz-grid-item-legend-due"></span> Dû aujourd'hui
-          </div>
+        <!-- Surah progress cards — replaces the old flat verse-number grid -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF;">Sourates du Juz sélectionné</h3>
+          <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: normal;">Touchez pour vous entraîner</span>
+        </div>
+
+        <div id="hifz-surah-list" class="hifz-surah-list">
+          <!-- Populated by JS -->
         </div>
       </section>
 

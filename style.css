@@ -1354,22 +1354,36 @@ main::-webkit-scrollbar {
 }
 
 /* Automatic Hiding Modes */
+/* Masked words render as a rounded "tap to reveal" game tile rather than
+   plain dashed-underline text, matching the Atelier's gamified styling. */
 .hifz-masked-word {
-  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 20%, transparent), color-mix(in srgb, var(--violet) 12%, transparent));
   color: transparent !important;
-  border-radius: var(--radius-sm);
+  border-radius: 20px;
   cursor: pointer;
-  transition: var(--transition-smooth);
+  transition: var(--transition-bounce);
   user-select: none;
-  padding: 0 4px;
-  border-bottom: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+  padding: 1px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
   display: inline-block;
+  animation: hifzTilePulse 2.4s infinite ease-in-out;
+}
+
+.hifz-masked-word:active {
+  transform: scale(0.92);
+}
+
+@keyframes hifzTilePulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+  50% { box-shadow: 0 0 8px var(--primary-glow); }
 }
 
 .hifz-masked-word.revealed {
   background: transparent;
   color: var(--text-strong) !important;
-  border-bottom: 1px dashed color-mix(in srgb, var(--text-strong) 10%, transparent);
+  border: 1px solid transparent;
+  padding: 1px 4px;
+  animation: none;
 }
 
 .hifz-masked-full-wrapper {
@@ -1480,86 +1494,275 @@ main::-webkit-scrollbar {
   100% { transform: scale(1); }
 }
 
-/* Hifz Workshop Grid Styles */
-.hifz-grid-item {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  background: color-mix(in srgb, var(--text-strong) 2%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
-  border-radius: var(--radius-md);
+/* Hifz Gamification — stats bar (streak + level/XP) */
+.hifz-stats-bar {
   display: flex;
-  justify-content: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.hifz-stat-chip {
+  flex: 1;
+  display: flex;
   align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+}
+
+.hifz-stat-chip-streak {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--text-strong);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-card));
+}
+
+.hifz-stat-icon {
+  font-size: 1rem;
+  filter: drop-shadow(0 0 6px var(--primary-glow));
+}
+
+.hifz-stat-label {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.hifz-stat-chip-xp {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  border-color: color-mix(in srgb, var(--violet) 30%, var(--border-card));
+}
+
+.hifz-level-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--violet);
+}
+
+.hifz-xp-bar-track {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hifz-xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--violet), var(--sapphire));
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hifz-xp-detail {
+  font-size: 0.5625rem;
+  color: var(--text-muted);
+  align-self: flex-end;
+}
+
+/* Compact version of the same chips, inline in the reader's Hifz toolbar */
+.hifz-mini-stats {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hifz-mini-stat {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* Review session hero CTA */
+.hifz-hero-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, var(--bg-card)), var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-card));
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.hifz-hero-card h3 {
   font-size: 0.875rem;
   font-weight: 700;
+  color: var(--text-strong);
+  margin-bottom: 2px;
+}
+
+.hifz-hero-card p {
+  font-size: 0.6875rem;
   color: var(--text-secondary);
+}
+
+.hifz-hero-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background: var(--primary);
+  color: #070913;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: var(--transition-bounce);
-  user-select: none;
+  box-shadow: 0 4px 16px var(--primary-glow);
 }
 
-.hifz-grid-item:hover {
-  border-color: var(--border-active);
-  transform: translateY(-2px);
+.hifz-hero-btn:active {
+  transform: scale(0.94);
 }
 
-.hifz-grid-item:active {
-  transform: scale(0.9);
+/* Badges / achievements row */
+.hifz-badges-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 24px;
+  padding-bottom: 2px;
 }
 
-/* Hifz Grid Item Color Mappings by SRS difficulty status */
-.hifz-grid-item.srs-none {
+.hifz-badges-row::-webkit-scrollbar {
+  display: none;
+}
+
+.hifz-badge {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 68px;
+  padding: 10px 6px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--text-strong) 2%, transparent);
-  border-color: color-mix(in srgb, var(--text-strong) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition: var(--transition-smooth);
 }
 
-.hifz-grid-item.srs-hard {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  color: var(--ruby) !important;
-  box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.05);
+.hifz-badge.earned {
+  opacity: 1;
+  filter: none;
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-card));
+  box-shadow: 0 0 12px var(--primary-glow);
 }
 
-.hifz-grid-item.srs-medium {
-  background: rgba(59, 130, 246, 0.08) !important;
-  border-color: rgba(59, 130, 246, 0.4) !important;
-  color: var(--sapphire) !important;
-  box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.05);
+.hifz-badge-icon {
+  font-size: 1.375rem;
 }
 
-.hifz-grid-item.srs-easy {
-  background: rgba(16, 185, 129, 0.08) !important;
-  border-color: rgba(16, 185, 129, 0.4) !important;
-  color: var(--emerald) !important;
-  box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.05);
+.hifz-badge-label {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* A verse whose scheduled review date has already passed — layered on top
-   of the hard/medium/easy/none coloring above, regardless of status. */
-.hifz-grid-item.srs-due {
-  box-shadow: 0 0 0 2px var(--primary), inset 0 0 10px rgba(212, 175, 55, 0.1) !important;
+/* Surah progress cards — replaces the old flat verse-number grid */
+.hifz-surah-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
-.hifz-grid-item.srs-due::after {
+.hifz-surah-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: var(--transition-bounce);
+}
+
+.hifz-surah-card:hover {
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+}
+
+.hifz-surah-card:active {
+  transform: scale(0.98);
+}
+
+.hifz-surah-card-ring {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary) calc(var(--pct, 0) * 1%), rgba(255, 255, 255, 0.08) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.hifz-surah-card-ring::before {
   content: '';
   position: absolute;
-  width: 7px;
-  height: 7px;
+  inset: 4px;
   border-radius: 50%;
-  background: var(--primary);
-  top: 4px;
-  right: 4px;
-  box-shadow: 0 0 4px var(--primary);
+  background: #0d111e;
 }
 
-.hifz-grid-item-legend-due {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 20%;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid var(--primary);
-  box-shadow: 0 0 4px var(--primary);
+.hifz-surah-card-ring span {
+  position: relative;
+  z-index: 1;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.hifz-surah-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hifz-surah-card-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.hifz-surah-card-ar {
+  font-family: var(--font-quran);
+  font-size: 0.8125rem;
+  color: var(--primary);
+}
+
+.hifz-surah-card-detail {
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.hifz-surah-card-play {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #070913;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 
 /* Flashcard Arabic Container states */
