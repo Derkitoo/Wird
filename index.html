@@ -511,10 +511,22 @@
           </span>
         </div>
 
-        <!-- Hifz Stats summary card -->
+        <!-- Review session CTA — the actual entry point into a guided, cross-Juz
+             review of every verse currently due, one flashcard after another. -->
+        <div class="glass-card" style="margin-bottom: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-left: 3px solid var(--primary);">
+          <div>
+            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 2px;">Révision du jour</h3>
+            <p id="hifz-due-detail" style="font-size: 0.6875rem; color: var(--text-secondary);">0 verset à réviser</p>
+          </div>
+          <button id="btn-hifz-start-session" class="btn-action-small" style="width:auto; padding: 10px 16px; background: var(--primary); color: #070913; border: none; border-radius: var(--radius-md); font-weight:700; font-size: 0.75rem; justify-content:center; cursor:pointer;">
+            Réviser ▶
+          </button>
+        </div>
+
+        <!-- Hifz Stats summary card (mastery within the selected Juz) -->
         <div class="glass-card" style="margin-bottom: 24px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
           <div>
-            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 4px;">Progression Hifz</h3>
+            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 4px;">Progression Hifz — Juz sélectionné</h3>
             <p id="hifz-progress-detail" style="font-size: 0.6875rem; color: var(--text-secondary);">0/40 versets maîtrisés (0%)</p>
           </div>
           <div style="width: 80px; height: 8px; background: rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
@@ -524,17 +536,17 @@
 
         <!-- Juz / Surah context indicator -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF;">Grille de révision</h3>
+          <h3 style="font-size: 0.9375rem; font-weight:600; color: #FFF;">Grille du Juz sélectionné</h3>
           <span style="font-size: 0.625rem; color: var(--text-muted); font-weight: normal;">Sélectionnez une case pour tester</span>
         </div>
-        
+
         <!-- Verse Grid -->
         <div id="hifz-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px;">
           <!-- Populated by JS -->
         </div>
 
         <!-- Grid Legend -->
-        <div class="glass-card" style="padding: 12px; font-size: 0.625rem; display: flex; justify-content: space-around; gap: 8px; color: var(--text-secondary); margin-bottom: 10px;">
+        <div class="glass-card" style="padding: 12px; font-size: 0.625rem; display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; color: var(--text-secondary); margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
             <span style="width:8px; height:8px; background:rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius:20%;"></span> Nouveau
           </div>
@@ -546,6 +558,9 @@
           </div>
           <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
             <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.2); border: 1px solid var(--emerald); border-radius:20%;"></span> Acquis
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+            <span class="hifz-grid-item-legend-due"></span> Dû aujourd'hui
           </div>
         </div>
       </section>
@@ -688,17 +703,21 @@
       <div id="speech-transcription" style="font-family: var(--font-quran); font-size: 1.125rem; text-align: right; direction: rtl; color: var(--text-secondary); min-height: 40px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); line-height:1.6;">
         (Parlez maintenant...)
       </div>
-      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px;">
-        <button id="btn-speech-stop" class="btn-action-small" style="flex: 1; background: rgba(255, 255, 255, 0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; justify-content:center;">
-          Annuler
-        </button>
-        <button id="btn-speech-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald); color: var(--emerald); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
-          Simuler OK
-        </button>
-        <button id="btn-speech-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--ruby); color: var(--ruby); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
-          Simuler Err
-        </button>
+      <!-- Shown only when SpeechRecognition is unsupported or the mic permission is denied — a real fallback, not a dev shortcut. -->
+      <div id="speech-fallback-row" style="display: none; flex-direction: column; gap: 8px;">
+        <p id="speech-fallback-msg" style="font-size: 0.625rem; color: var(--text-muted); margin: 0;">Micro indisponible sur cet appareil.</p>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-speech-fallback-known" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald); color: var(--emerald); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
+            Je le connais ✅
+          </button>
+          <button id="btn-speech-fallback-unsure" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--ruby); color: var(--ruby); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
+            À revoir ⚠️
+          </button>
+        </div>
       </div>
+      <button id="btn-speech-stop" class="btn-action-small" style="width:100%; background: rgba(255, 255, 255, 0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; justify-content:center; margin-top: 4px;">
+        Annuler
+      </button>
     </div>
 
     <!-- Hifz Flashcard Overlay Modal -->
@@ -707,6 +726,7 @@
         <h3>Flashcard Récitation <span id="hifz-card-ref">78:1</span></h3>
         <button id="hifz-card-close" class="btn-close-drawer">&times;</button>
       </div>
+      <div id="hifz-session-banner" style="display:none; font-size: 0.625rem; font-weight:700; color: var(--primary); text-align:center; padding: 4px 0 0;"></div>
       <div class="tafsir-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding-bottom: 30px;">
         
         <!-- Clue 1: Translation -->
@@ -738,10 +758,13 @@
           <div id="hifz-card-recording-status" style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:500;">Cliquez pour réciter</div>
         </div>
 
-        <!-- Quick simulation overrides -->
-        <div style="display: flex; gap: 8px; width: 100%;">
-          <button id="hifz-card-sim-ok" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--emerald); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">Simuler Succès</button>
-          <button id="hifz-card-sim-err" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--ruby); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">Simuler Erreur</button>
+        <!-- Shown only when SpeechRecognition is unsupported or the mic permission is denied — a real fallback, not a dev shortcut. -->
+        <div id="hifz-fallback-row" style="display: none; flex-direction: column; gap: 8px; width: 100%;">
+          <p id="hifz-fallback-msg" style="font-size: 0.625rem; color: var(--text-muted); margin: 0;">Micro indisponible sur cet appareil.</p>
+          <div style="display: flex; gap: 8px;">
+            <button id="hifz-card-fallback-known" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--emerald); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">Je le connais ✅</button>
+            <button id="hifz-card-fallback-unsure" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--ruby); padding: 8px; justify-content:center; border-radius: var(--radius-md); font-weight:600; font-size: 0.6875rem;">À revoir ⚠️</button>
+          </div>
         </div>
 
         <!-- SRS Buttons inside Flashcard -->

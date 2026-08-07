@@ -70,7 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hifz Workshop active state
     activeHifzVerse: null,
     activeHifzSurah: null,
+    activeHifzJuz: null,
     hifzSpeechRecognition: null,
+    // Guided review session: an ordered queue of srsDatabase keys due for
+    // review, walked one at a time via the flashcard, across any Juz.
+    reviewQueue: [],
+    reviewSessionActive: false,
     // Wird custom planner (total = 20 pages for 1 Juz)
     wirdPagePlan: {
       fajr: 4,
@@ -142,31 +147,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const speechTranscription = document.getElementById('speech-transcription');
   const btnSpeechClose = document.getElementById('btn-speech-close');
   const btnSpeechStop = document.getElementById('btn-speech-stop');
-  const btnSpeechSimOk = document.getElementById('btn-speech-sim-ok');
-  const btnSpeechSimErr = document.getElementById('btn-speech-sim-err');
+  const speechFallbackRow = document.getElementById('speech-fallback-row');
+  const speechFallbackMsg = document.getElementById('speech-fallback-msg');
+  const btnSpeechFallbackKnown = document.getElementById('btn-speech-fallback-known');
+  const btnSpeechFallbackUnsure = document.getElementById('btn-speech-fallback-unsure');
 
   // Hifz Refactored Workshop elements (view-memorize)
   const hifzJuzBadge = document.getElementById('hifz-juz-badge');
   const hifzProgressDetail = document.getElementById('hifz-progress-detail');
   const hifzProgressBarFill = document.getElementById('hifz-progress-bar-fill');
   const hifzGrid = document.getElementById('hifz-grid');
-  
+  const hifzDueDetail = document.getElementById('hifz-due-detail');
+  const btnHifzStartSession = document.getElementById('btn-hifz-start-session');
+
   // Hifz Flashcard drawer elements
   const hifzFlashcardModal = document.getElementById('hifz-flashcard-modal');
   const hifzCardClose = document.getElementById('hifz-card-close');
   const hifzCardRef = document.getElementById('hifz-card-ref');
+  const hifzSessionBanner = document.getElementById('hifz-session-banner');
   const hifzCardTranslation = document.getElementById('hifz-card-translation');
   const hifzCardTranslit = document.getElementById('hifz-card-translit');
-  
+
   const hifzCardArabicWrapper = document.getElementById('hifz-card-arabic-wrapper');
   const hifzCardPlaceholder = document.getElementById('hifz-card-placeholder');
   const hifzCardArabic = document.getElementById('hifz-card-arabic');
-  
+
   const hifzCardMicBtn = document.getElementById('hifz-card-mic-btn');
   const hifzCardRecordingStatus = document.getElementById('hifz-card-recording-status');
-  
-  const hifzCardSimOk = document.getElementById('hifz-card-sim-ok');
-  const hifzCardSimErr = document.getElementById('hifz-card-sim-err');
+
+  const hifzFallbackRow = document.getElementById('hifz-fallback-row');
+  const hifzFallbackMsg = document.getElementById('hifz-fallback-msg');
+  const hifzCardFallbackKnown = document.getElementById('hifz-card-fallback-known');
+  const hifzCardFallbackUnsure = document.getElementById('hifz-card-fallback-unsure');
   const hifzCardSrsRow = document.getElementById('hifz-card-srs-row');
   
   const drawerOverlay = document.getElementById('drawer-overlay');
@@ -355,25 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // SRS dashboard start button
-    if (btnStartRevision) {
-      btnStartRevision.addEventListener('click', () => {
-        const now = Date.now();
-        const dueVerseKey = Object.keys(state.srsDatabase).find(key => {
-          return state.srsDatabase[key].nextReviewDate <= now;
-        });
-
-        if (dueVerseKey) {
-          const parts = dueVerseKey.split('_');
-          const targetJuz = parseInt(parts[1], 10);
-          state.selectedJuz = targetJuz;
-          localStorage.setItem('wird_selected_juz', targetJuz);
-          if (selectJuz) selectJuz.value = targetJuz;
-          
-          switchView('memorize');
-        }
-      });
-    }
+    // SRS dashboard/workshop "start review session" buttons — both just
+    // kick off the same guided, cross-Juz review queue.
+    if (btnStartRevision) btnStartRevision.addEventListener('click', startReviewSession);
+    if (btnHifzStartSession) btnHifzStartSession.addEventListener('click', startReviewSession);
 
     // Social post button binding
     if (btnCirclePost && inputCirclePost) {
@@ -386,35 +383,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reader Speech UI control bindings
     if (btnSpeechClose) btnSpeechClose.addEventListener('click', cancelSpeechRecording);
     if (btnSpeechStop) btnSpeechStop.addEventListener('click', cancelSpeechRecording);
-    
-    // Reader Speech Simulations overrides
-    if (btnSpeechSimOk) {
-      btnSpeechSimOk.addEventListener('click', () => {
+
+    // Manual fallback — only ever shown when SpeechRecognition is unsupported
+    // or the mic permission was denied (see startSpeechRecording).
+    if (btnSpeechFallbackKnown) {
+      btnSpeechFallbackKnown.addEventListener('click', () => {
         const verse = getActiveRecordingVerse();
         if (verse) evaluateSpeechResult(verse.textAr);
       });
     }
-    if (btnSpeechSimErr) {
-      btnSpeechSimErr.addEventListener('click', () => {
-        evaluateSpeechResult("كلمات خاطئة غير مطابقة تماما");
+    if (btnSpeechFallbackUnsure) {
+      btnSpeechFallbackUnsure.addEventListener('click', () => {
+        evaluateSpeechResult('');
       });
     }
 
     // Hifz Flashcard Bindings
     if (hifzCardClose) hifzCardClose.addEventListener('click', closeHifzFlashcard);
     if (hifzCardMicBtn) hifzCardMicBtn.addEventListener('click', startHifzVoiceRecording);
-    
-    if (hifzCardSimOk) {
-      hifzCardSimOk.addEventListener('click', () => {
-        if (state.activeHifzVerse) {
-          evaluateHifzSpeechResult(state.activeHifzVerse.textAr);
-        }
+
+    // Manual fallback — only ever shown when SpeechRecognition is unsupported
+    // or the mic permission was denied (see startHifzVoiceRecording).
+    if (hifzCardFallbackKnown) {
+      hifzCardFallbackKnown.addEventListener('click', () => {
+        if (state.activeHifzVerse) evaluateHifzSpeechResult(state.activeHifzVerse.textAr);
       });
     }
-    
-    if (hifzCardSimErr) {
-      hifzCardSimErr.addEventListener('click', () => {
-        evaluateHifzSpeechResult("خطأ تلاوة خاطئة");
+    if (hifzCardFallbackUnsure) {
+      hifzCardFallbackUnsure.addEventListener('click', () => {
+        evaluateHifzSpeechResult('');
       });
     }
 
@@ -422,29 +419,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const hifzSrsButtons = document.querySelectorAll('#hifz-card-srs-row .btn-srs');
     hifzSrsButtons.forEach(btn => {
       btn.addEventListener('click', () => {
-        if (!state.activeHifzVerse || !state.activeHifzSurah) return;
-        
+        if (!state.activeHifzVerse || !state.activeHifzSurah || !state.activeHifzJuz) return;
+
         const rating = btn.dataset.hifzRating;
-        const verseKey = `juz_${state.selectedJuz}_surah_${state.activeHifzSurah.number}_verse_${state.activeHifzVerse.numberInSurah}`;
-        
-        let intervalDays = 1;
-        if (rating === 'medium') intervalDays = 3;
-        if (rating === 'easy') intervalDays = 7;
+        const verseKey = `juz_${state.activeHifzJuz}_surah_${state.activeHifzSurah.number}_verse_${state.activeHifzVerse.numberInSurah}`;
+        scheduleSrsReview(verseKey, rating);
 
-        state.srsDatabase[verseKey] = {
-          nextReviewDate: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
-          difficulty: rating,
-          interval: intervalDays,
-          timestamp: Date.now()
-        };
-
-        localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
-        
         createConfetti(btn);
-        
+
         setTimeout(() => {
-          closeHifzFlashcard();
-          loadHifzDashboard();
+          if (state.reviewSessionActive) {
+            state.reviewQueue.shift();
+            advanceReviewSession();
+          } else {
+            closeHifzFlashcard();
+            loadHifzDashboard();
+          }
           updateSRSDashboardCard();
         }, 600);
       });
@@ -1464,56 +1454,117 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Voice Speech Recognition API Integration (for Reader View)
+  // Scores how closely spokenText matches the expected verse text — shared
+  // by the reader's inline recitation check and the Hifz Workshop flashcard
+  // so the two don't drift into subtly different pass/fail rules.
+  function computeRecitationScore(spokenText, originalArabicText) {
+    const originalWords = cleanArabicText(originalArabicText).split(' ').filter(Boolean);
+    const spokenWords = cleanArabicText(spokenText).split(' ').filter(Boolean);
+    let matchesCount = 0;
+    originalWords.forEach(w => { if (spokenWords.includes(w)) matchesCount++; });
+    const scorePct = originalWords.length > 0 ? Math.round((matchesCount / originalWords.length) * 100) : 0;
+    return { scorePct, passed: scorePct >= 70 };
+  }
+
+  // Persists an SRS rating and schedules the next review date — shared by
+  // the reader's per-verse SRS buttons, the Hifz flashcard's SRS buttons,
+  // and the automatic pass/fail write after a voice check.
+  function scheduleSrsReview(verseKey, rating) {
+    const intervals = { hard: 1, medium: 3, easy: 7 };
+    const intervalDays = intervals[rating] || 1;
+    state.srsDatabase[verseKey] = {
+      nextReviewDate: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
+      difficulty: rating,
+      interval: intervalDays,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
+  }
+
+  // Wraps SpeechRecognition setup/teardown so the reader's inline recitation
+  // check and the Hifz flashcard's mic button don't each keep their own
+  // near-identical copy of it. Calls exactly one of onFinalResult(text) /
+  // onNoSpeech() / onUnsupported() / onPermissionDenied(); returns the
+  // recognizer instance (or null) so the caller can store it for cancellation.
+  function createSpeechRecognizer({ onInterimResult, onFinalResult, onNoSpeech, onUnsupported, onPermissionDenied }) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      onUnsupported();
+      return null;
+    }
+
+    const rec = new SpeechRecognition();
+    rec.lang = 'ar-SA';
+    rec.interimResults = true;
+    rec.continuous = false;
+
+    let lastText = '';
+    rec.onresult = (event) => {
+      lastText = Array.from(event.results).map(r => r[0].transcript).join('');
+      if (onInterimResult) onInterimResult(lastText);
+    };
+
+    rec.onend = () => {
+      if (lastText.trim()) {
+        onFinalResult(lastText.trim());
+      } else if (onNoSpeech) {
+        onNoSpeech();
+      }
+    };
+
+    rec.onerror = (e) => {
+      console.warn("Speech recognition error:", e.error);
+      if (e.error === 'not-allowed') onPermissionDenied();
+    };
+
+    try {
+      rec.start();
+      return rec;
+    } catch (err) {
+      console.error("Failed to start recognition:", err);
+      onUnsupported();
+      return null;
+    }
+  }
+
+  function closeSpeechModal() {
+    if (speechModal) speechModal.style.display = 'none';
+    if (speechFallbackRow) speechFallbackRow.style.display = 'none';
+    document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
+  }
+
+  // Voice Speech Recognition Integration (Reader View)
   function startSpeechRecording(globalNum, buttonElement) {
     stopAudio();
     state.recordingVerseNum = globalNum;
-    
+
     if (speechModal && speechTranscription) {
       speechModal.style.display = 'flex';
       speechTranscription.textContent = "(Parlez maintenant...)";
     }
+    if (speechFallbackRow) speechFallbackRow.style.display = 'none';
 
     document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
     if (buttonElement) buttonElement.classList.add('listening-active');
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.lang = 'ar-SA';
-      rec.interimResults = true;
-      rec.continuous = false;
-
-      rec.onresult = (event) => {
-        const resultText = Array.from(event.results)
-          .map(r => r[0].transcript)
-          .join('');
-        speechTranscription.textContent = resultText;
-      };
-
-      rec.onend = () => {
-        const finalVal = speechTranscription.textContent.trim();
-        if (finalVal && finalVal !== "(Parlez maintenant...)") {
-          evaluateSpeechResult(finalVal);
-        }
-      };
-
-      rec.onerror = (e) => {
-        console.warn("Speech recognition error:", e.error);
-        if (e.error === 'not-allowed') {
-          speechTranscription.textContent = "(Permission micro bloquée. Utilisez le bouton 'Simuler' pour tester.)";
-        }
-      };
-
-      try {
-        rec.start();
-        state.activeRecognition = rec;
-      } catch (err) {
-        console.error("Failed to start recognition:", err);
+    state.activeRecognition = createSpeechRecognizer({
+      onInterimResult: (text) => { speechTranscription.textContent = text; },
+      onFinalResult: (text) => evaluateSpeechResult(text),
+      onNoSpeech: () => {
+        speechTranscription.textContent = "(Rien entendu, réessayez.)";
+        document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
+      },
+      onUnsupported: () => {
+        speechTranscription.textContent = "(Reconnaissance vocale indisponible.)";
+        if (speechFallbackMsg) speechFallbackMsg.textContent = "Reconnaissance vocale indisponible sur cet appareil.";
+        if (speechFallbackRow) speechFallbackRow.style.display = 'flex';
+      },
+      onPermissionDenied: () => {
+        speechTranscription.textContent = "(Permission micro refusée.)";
+        if (speechFallbackMsg) speechFallbackMsg.textContent = "L'accès au micro a été refusé.";
+        if (speechFallbackRow) speechFallbackRow.style.display = 'flex';
       }
-    } else {
-      speechTranscription.textContent = "(Votre navigateur ne supporte pas le micro. Utilisez les boutons 'Simuler'.)";
-    }
+    });
   }
 
   function getActiveRecordingVerse() {
@@ -1547,7 +1598,9 @@ document.addEventListener('DOMContentLoaded', () => {
       .trim();
   }
 
-  // Evaluate speech result (Reader View)
+  // Evaluate speech result (Reader View) — also reached with an empty
+  // spokenText from the manual "À revoir" fallback button, which correctly
+  // scores as 0% via computeRecitationScore.
   function evaluateSpeechResult(spokenText) {
     if (state.activeRecognition) {
       state.activeRecognition.onend = null;
@@ -1564,67 +1617,103 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const cleanOriginal = cleanArabicText(verseObj.textAr);
-    const cleanSpoken = cleanArabicText(spokenText);
-
-    const originalWords = cleanOriginal.split(' ');
-    const spokenWords = cleanSpoken.split(' ');
-    
-    let matchesCount = 0;
-    originalWords.forEach(w => {
-      if (spokenWords.includes(w)) {
-        matchesCount++;
-      }
-    });
-
-    const scorePct = Math.round((matchesCount / originalWords.length) * 100);
+    const { scorePct, passed } = computeRecitationScore(spokenText, verseObj.textAr);
+    const rating = passed ? 'easy' : 'hard';
+    const quote = spokenText ? ` - "${spokenText.substring(0, 20)}..."` : '';
 
     verseBlock.classList.remove('recitation-success', 'recitation-error');
+    verseBlock.classList.add(passed ? 'recitation-success' : 'recitation-error');
 
     const srsRow = verseBlock.querySelector('.srs-buttons-row');
-    const verseKey = `juz_${state.selectedJuz}_surah_${verseBlock.dataset.surahNum}_verse_${verseObj.numberInSurah}`;
-
-    if (scorePct >= 70) {
-      showToast("Récitation Réussie ! 🎉", `Précision : ${scorePct}% - "${spokenText.substring(0, 20)}..."`);
-      verseBlock.classList.add('recitation-success');
-      
-      if (srsRow) {
-        srsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
-        srsRow.querySelector('.btn-srs-easy').classList.add('active');
-      }
-
-      state.srsDatabase[verseKey] = {
-        nextReviewDate: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        difficulty: 'easy',
-        interval: 7,
-        timestamp: Date.now()
-      };
-      
-      createConfetti(verseBlock);
-
-    } else {
-      showToast("À revoir ⚠️", `Précision : ${scorePct}% - "${spokenText.substring(0, 20)}..."`);
-      verseBlock.classList.add('recitation-error');
-      
-      if (srsRow) {
-        srsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
-        srsRow.querySelector('.btn-srs-hard').classList.add('active');
-      }
-
-      state.srsDatabase[verseKey] = {
-        nextReviewDate: Date.now() + 1 * 24 * 60 * 60 * 1000,
-        difficulty: 'hard',
-        interval: 1,
-        timestamp: Date.now()
-      };
+    if (srsRow) {
+      srsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
+      srsRow.querySelector(passed ? '.btn-srs-easy' : '.btn-srs-hard').classList.add('active');
     }
 
-    localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
+    const verseKey = `juz_${state.selectedJuz}_surah_${verseBlock.dataset.surahNum}_verse_${verseObj.numberInSurah}`;
+    scheduleSrsReview(verseKey, rating);
+
+    if (passed) {
+      showToast("Récitation Réussie ! 🎉", `Précision : ${scorePct}%${quote}`);
+      createConfetti(verseBlock);
+    } else {
+      showToast("À revoir ⚠️", `Précision : ${scorePct}%${quote}`);
+    }
+
     updateSRSDashboardCard();
     closeSpeechModal();
   }
 
   // ==================== HIFZ WORKSHOP LOGIC ====================
+
+  // Per-Juz data fetched on demand while walking a cross-Juz review session,
+  // kept separate from state.juzData (which tracks the reader's own Juz) so
+  // reviewing doesn't disturb the user's current reading position.
+  const reviewSessionJuzCache = {};
+  async function ensureJuzDataLoaded(juzNum) {
+    if (state.juzData && state.juzData.juzNumber === juzNum) return state.juzData;
+    if (reviewSessionJuzCache[juzNum]) return reviewSessionJuzCache[juzNum];
+    const data = await window.QuranAPI.fetchJuz(juzNum, state.selectedReciter);
+    reviewSessionJuzCache[juzNum] = data;
+    return data;
+  }
+
+  // Starts a guided review session: every verse currently due (any Juz),
+  // oldest-due-first, presented one at a time via the flashcard.
+  async function startReviewSession() {
+    const now = Date.now();
+    const dueKeys = Object.keys(state.srsDatabase)
+      .filter(k => state.srsDatabase[k].nextReviewDate <= now)
+      .sort((a, b) => state.srsDatabase[a].nextReviewDate - state.srsDatabase[b].nextReviewDate);
+
+    if (dueKeys.length === 0) {
+      showToast("Rien à réviser", "Aucun verset n'est dû pour révision aujourd'hui.");
+      return;
+    }
+
+    state.reviewQueue = dueKeys;
+    state.reviewSessionActive = true;
+    switchView('memorize');
+    await advanceReviewSession();
+  }
+
+  // Presents the next verse in the review queue, or closes out the session
+  // once it's empty. Called after each SRS rating during an active session.
+  async function advanceReviewSession() {
+    if (!state.reviewQueue || state.reviewQueue.length === 0) {
+      const wasActive = state.reviewSessionActive;
+      closeHifzFlashcard();
+      if (wasActive) {
+        showToast("Session terminée ! 🎉", "Vous avez révisé tous les versets dus.");
+        loadHifzDashboard();
+      }
+      return;
+    }
+
+    const key = state.reviewQueue[0];
+    const parts = key.split('_'); // ['juz', J, 'surah', S, 'verse', V]
+    const juzNum = parseInt(parts[1], 10);
+    const surahNum = parseInt(parts[3], 10);
+    const verseNumInSurah = parseInt(parts[5], 10);
+
+    let juzData;
+    try {
+      juzData = await ensureJuzDataLoaded(juzNum);
+    } catch (err) {
+      console.warn("Failed to load Juz for review session", juzNum, err);
+      state.reviewQueue.shift();
+      return advanceReviewSession();
+    }
+
+    const surah = juzData.surahs.find(s => s.number === surahNum);
+    const verse = surah ? surah.verses.find(v => v.numberInSurah === verseNumInSurah) : null;
+    if (!surah || !verse) {
+      state.reviewQueue.shift();
+      return advanceReviewSession();
+    }
+
+    openHifzFlashcard(verse, surah, juzNum, `Sourate ${surah.number}:${verse.numberInSurah}`);
+  }
 
   // Load and Render the visual Hifz Dashboard Grid (view-memorize)
   async function loadHifzDashboard() {
@@ -1632,6 +1721,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     hifzJuzBadge.textContent = `Juz ${state.selectedJuz}`;
     hifzGrid.innerHTML = '<div style="grid-column: span 5; text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
+    updateHifzDueSummary();
 
     if (!state.juzData || state.juzData.juzNumber !== state.selectedJuz) {
       try {
@@ -1679,15 +1769,16 @@ document.addEventListener('DOMContentLoaded', () => {
     hifzProgressDetail.textContent = `${masteredCount}/${allVerses.length} versets acquis (${percent}%)`;
     hifzProgressBarFill.style.width = `${percent}%`;
 
+    const now = Date.now();
     hifzGrid.innerHTML = '';
     allVerses.forEach((item, index) => {
       const v = item.verse;
       const surah = item.surah;
       const key = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
-      
+
       const gridItem = document.createElement('div');
       gridItem.className = 'hifz-grid-item';
-      
+
       gridItem.textContent = index + 1;
       gridItem.title = `${surah.nameFr} (V. ${v.numberInSurah})`;
 
@@ -1696,34 +1787,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (record.difficulty === 'hard') gridItem.classList.add('srs-hard');
         else if (record.difficulty === 'medium') gridItem.classList.add('srs-medium');
         else if (record.difficulty === 'easy') gridItem.classList.add('srs-easy');
+        if (record.nextReviewDate <= now) gridItem.classList.add('srs-due');
       } else {
         gridItem.classList.add('srs-none');
       }
 
       gridItem.addEventListener('click', () => {
-        openHifzFlashcard(v, surah, index + 1);
+        openHifzFlashcard(v, surah, state.selectedJuz, `Sourate ${surah.number}:${v.numberInSurah}`);
       });
 
       hifzGrid.appendChild(gridItem);
     });
   }
 
-  // Open Flashcard modal for target verse
-  function openHifzFlashcard(verse, surah, sequentialIdx) {
+  // Global count of verses due for review right now, across every Juz —
+  // independent of which Juz is currently selected in the dropdown.
+  function updateHifzDueSummary() {
+    if (!hifzDueDetail) return;
+    const now = Date.now();
+    const dueCount = Object.values(state.srsDatabase).filter(r => r.nextReviewDate <= now).length;
+    hifzDueDetail.textContent = dueCount > 0
+      ? `${dueCount} verset${dueCount > 1 ? 's' : ''} à réviser`
+      : "Aucun verset à réviser pour le moment";
+  }
+
+  // Open Flashcard modal for target verse. refLabel is shown in the header;
+  // juzNum must be the verse's actual Juz (not necessarily state.selectedJuz —
+  // a review session can walk verses across several Juz).
+  function openHifzFlashcard(verse, surah, juzNum, refLabel) {
     state.activeHifzVerse = verse;
     state.activeHifzSurah = surah;
+    state.activeHifzJuz = juzNum;
     state.audioPlayCount = 1;
 
-    hifzCardRef.textContent = `V. ${sequentialIdx} (Sourate ${surah.number}:${verse.numberInSurah})`;
+    hifzCardRef.textContent = refLabel || `Sourate ${surah.number}:${verse.numberInSurah}`;
+
+    if (hifzSessionBanner) {
+      if (state.reviewSessionActive && state.reviewQueue) {
+        hifzSessionBanner.style.display = 'block';
+        hifzSessionBanner.textContent = `Session de révision — ${state.reviewQueue.length} restant(s)`;
+      } else {
+        hifzSessionBanner.style.display = 'none';
+      }
+    }
+
     hifzCardTranslation.textContent = `"${verse.translation}"`;
     hifzCardTranslit.textContent = verse.transliteration;
 
     hifzCardPlaceholder.style.display = 'block';
+    hifzCardPlaceholder.textContent = 'Enregistrez votre voix pour valider...';
+    hifzCardPlaceholder.style.color = '';
+    hifzCardPlaceholder.style.fontStyle = '';
     hifzCardArabic.style.display = 'none';
     hifzCardArabic.textContent = verse.textAr;
     hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
-    
+
     hifzCardSrsRow.style.display = 'none';
+    if (hifzFallbackRow) hifzFallbackRow.style.display = 'none';
     hifzCardMicBtn.className = '';
     hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
     hifzCardRecordingStatus.style.color = 'var(--text-secondary)';
@@ -1735,19 +1855,22 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeHifzFlashcard() {
-    if (state.hifzSpeechRecognition) {
-      state.hifzSpeechRecognition.onend = null;
-      state.hifzSpeechRecognition.stop();
-      state.hifzSpeechRecognition = null;
-    }
-    
+    cancelHifzSpeechRecording();
+
     if (hifzFlashcardModal && drawerOverlay) {
       hifzFlashcardModal.classList.remove('open');
       drawerOverlay.classList.remove('active');
     }
-    
+
     state.activeHifzVerse = null;
     state.activeHifzSurah = null;
+    state.activeHifzJuz = null;
+
+    // Closing manually (not via a rating) abandons any in-progress session.
+    if (state.reviewSessionActive) {
+      state.reviewSessionActive = false;
+      state.reviewQueue = [];
+    }
   }
 
   // Record voice inside the Hifz Flashcard
@@ -1758,52 +1881,31 @@ document.addEventListener('DOMContentLoaded', () => {
     hifzCardArabic.style.display = 'none';
     hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
     hifzCardSrsRow.style.display = 'none';
+    if (hifzFallbackRow) hifzFallbackRow.style.display = 'none';
 
     hifzCardMicBtn.className = 'hifz-mic-pulse-active';
     hifzCardRecordingStatus.textContent = 'Écoute en cours... Récitez le verset';
     hifzCardRecordingStatus.style.color = 'var(--ruby)';
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.lang = 'ar-SA';
-      rec.interimResults = true;
-      rec.continuous = false;
-
-      rec.onresult = (event) => {
-        const resultText = Array.from(event.results)
-          .map(r => r[0].transcript)
-          .join('');
-        hifzCardPlaceholder.textContent = resultText;
+    state.hifzSpeechRecognition = createSpeechRecognizer({
+      onInterimResult: (text) => {
+        hifzCardPlaceholder.textContent = text;
         hifzCardPlaceholder.style.color = '#FFF';
         hifzCardPlaceholder.style.fontStyle = 'normal';
-      };
-
-      rec.onend = () => {
-        const val = hifzCardPlaceholder.textContent.trim();
-        if (val && val !== "Enregistrez votre voix pour valider...") {
-          evaluateHifzSpeechResult(val);
-        } else {
-          cancelHifzSpeechRecording();
-        }
-      };
-
-      rec.onerror = (e) => {
-        console.warn("Hifz mic error", e.error);
-        if (e.error === 'not-allowed') {
-          hifzCardRecordingStatus.textContent = 'Permission refusée. Utilisez la simulation.';
-          hifzCardRecordingStatus.style.color = 'var(--ruby)';
-        }
+      },
+      onFinalResult: (text) => evaluateHifzSpeechResult(text),
+      onNoSpeech: () => cancelHifzSpeechRecording(),
+      onUnsupported: () => {
         cancelHifzSpeechRecording();
-      };
-
-      rec.start();
-      state.hifzSpeechRecognition = rec;
-
-    } else {
-      hifzCardRecordingStatus.textContent = 'Micro non supporté. Utilisez la simulation.';
-      hifzCardRecordingStatus.style.color = 'var(--ruby)';
-    }
+        if (hifzFallbackMsg) hifzFallbackMsg.textContent = "Reconnaissance vocale indisponible sur cet appareil.";
+        if (hifzFallbackRow) hifzFallbackRow.style.display = 'flex';
+      },
+      onPermissionDenied: () => {
+        cancelHifzSpeechRecording();
+        if (hifzFallbackMsg) hifzFallbackMsg.textContent = "L'accès au micro a été refusé.";
+        if (hifzFallbackRow) hifzFallbackRow.style.display = 'flex';
+      }
+    });
   }
 
   // Cancel speech recording loop
@@ -1811,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hifzCardMicBtn.className = '';
     hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
     hifzCardRecordingStatus.style.color = 'var(--text-secondary)';
-    
+
     if (state.hifzSpeechRecognition) {
       state.hifzSpeechRecognition.onend = null;
       state.hifzSpeechRecognition.stop();
@@ -1819,38 +1921,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Check matching score in Flashcard
+  // Check matching score in Flashcard — writing the SRS rating still
+  // requires an explicit tap on one of the three rating buttons below
+  // (this only pre-selects a suggested one), matching the flashcard's
+  // existing "confirm your own rating" flow.
   function evaluateHifzSpeechResult(spokenText) {
     cancelHifzSpeechRecording();
+    if (!state.activeHifzVerse) return;
 
-    if (!state.activeHifzVerse || !state.activeHifzSurah) return;
-
-    const cleanOriginal = cleanArabicText(state.activeHifzVerse.textAr);
-    const cleanSpoken = cleanArabicText(spokenText);
-
-    const originalWords = cleanOriginal.split(' ');
-    const spokenWords = cleanSpoken.split(' ');
-    
-    let matchesCount = 0;
-    originalWords.forEach(w => {
-      if (spokenWords.includes(w)) {
-        matchesCount++;
-      }
-    });
-
-    const scorePct = Math.round((matchesCount / originalWords.length) * 100);
+    const { scorePct, passed } = computeRecitationScore(spokenText, state.activeHifzVerse.textAr);
+    const quote = spokenText ? ` - "${spokenText.substring(0, 20)}..."` : '';
 
     hifzCardPlaceholder.style.display = 'none';
     hifzCardArabic.style.display = 'block';
     hifzCardSrsRow.style.display = 'flex';
     hifzCardSrsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
 
-    if (scorePct >= 70) {
-      showToast("Récitation Réussie ! 🎉", `Précision : ${scorePct}% - "${spokenText.substring(0, 20)}..."`);
+    if (passed) {
+      showToast("Récitation Réussie ! 🎉", `Précision : ${scorePct}%${quote}`);
       hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper flashcard-reveal-success';
       hifzCardSrsRow.querySelector('.btn-srs-easy').classList.add('active');
     } else {
-      showToast("Récitation à revoir ⚠️", `Précision : ${scorePct}% - "${spokenText.substring(0, 20)}..."`);
+      showToast("Récitation à revoir ⚠️", `Précision : ${scorePct}%${quote}`);
       hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper flashcard-reveal-error';
       hifzCardSrsRow.querySelector('.btn-srs-hard').classList.add('active');
     }
@@ -2247,6 +2339,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       srsRevisionsCard.style.display = 'none';
     }
+
+    updateHifzDueSummary();
   }
 
   // Toast Notification Generator

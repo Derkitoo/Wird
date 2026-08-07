@@ -1482,6 +1482,7 @@ main::-webkit-scrollbar {
 
 /* Hifz Workshop Grid Styles */
 .hifz-grid-item {
+  position: relative;
   aspect-ratio: 1 / 1;
   background: color-mix(in srgb, var(--text-strong) 2%, transparent);
   border: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
@@ -1531,6 +1532,34 @@ main::-webkit-scrollbar {
   border-color: rgba(16, 185, 129, 0.4) !important;
   color: var(--emerald) !important;
   box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.05);
+}
+
+/* A verse whose scheduled review date has already passed — layered on top
+   of the hard/medium/easy/none coloring above, regardless of status. */
+.hifz-grid-item.srs-due {
+  box-shadow: 0 0 0 2px var(--primary), inset 0 0 10px rgba(212, 175, 55, 0.1) !important;
+}
+
+.hifz-grid-item.srs-due::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  top: 4px;
+  right: 4px;
+  box-shadow: 0 0 4px var(--primary);
+}
+
+.hifz-grid-item-legend-due {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 20%;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 4px var(--primary);
 }
 
 /* Flashcard Arabic Container states */
