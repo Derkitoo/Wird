@@ -1455,9 +1455,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetParent = document.getElementById('quran-book') || quranContainer;
     if (!targetParent) return;
 
-    // Read-mode dense Mushaf page: tap the small ayah-end marker to open
-    // tafsir (translation + explanation) for that verse and save it as the
-    // reading position — there's no per-verse button row in this layout.
+    // Read-mode dense Mushaf page has no per-verse button row, so both
+    // actions are reached via the two tap zones the layout already has:
+    // tapping the verse's Arabic text plays its recitation, tapping its
+    // small ayah-end marker opens tafsir (translation + explanation).
+    targetParent.querySelectorAll('.mushaf-verse').forEach(verseEl => {
+      verseEl.addEventListener('click', (e) => {
+        const num = parseInt(verseEl.dataset.verseNum, 10);
+        playVerse(num);
+        saveReadingPosition(num);
+      });
+    });
+
     targetParent.querySelectorAll('.ayah-marker').forEach(marker => {
       marker.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1591,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.audioPlayCount = 1;
     }
 
-    document.querySelectorAll('.verse-block').forEach(b => b.classList.remove('active-reciting'));
+    document.querySelectorAll('.verse-block, .mushaf-verse').forEach(b => b.classList.remove('active-reciting'));
 
     const activeBlock = document.getElementById(`verse-${globalNum}`);
     if (activeBlock) {
