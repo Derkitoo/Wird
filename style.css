@@ -842,6 +842,51 @@ main::-webkit-scrollbar {
   user-select: none;
 }
 
+/* Dense, continuous Mushaf-style page (Lecture mode inside the page-flip
+   book) — plain flowing Arabic text instead of a card per verse, closed by
+   a small tappable ayah-end marker instead of a full action-button row, so
+   a whole page's worth of verses actually fits in the fixed page frame. */
+.mushaf-surah-header {
+  font-family: var(--font-quran);
+  font-size: 0.8125rem;
+  text-align: center;
+  color: var(--primary);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--reading-rule);
+}
+
+.mushaf-flow {
+  font-family: var(--font-quran);
+  font-size: 26px;
+  line-height: 1.85;
+  text-align: justify;
+  color: var(--reading-text);
+  margin-bottom: 14px;
+}
+
+.mushaf-verse {
+  cursor: pointer;
+}
+
+.ayah-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4em;
+  height: 1.4em;
+  padding: 0 2px;
+  margin: 0 2px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-family: var(--font-ui);
+  font-size: 0.55em;
+  font-weight: 700;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
 /* Interactive Hide/Show styling in memorization */
 .quran-word-interactive {
   display: inline-block;

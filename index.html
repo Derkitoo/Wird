@@ -60,6 +60,11 @@
         root.style.setProperty('--viewport-w', vw.toFixed(1) + 'px');
         root.style.setProperty('--viewport-h', vh.toFixed(1) + 'px');
         root.setAttribute('data-aspect', isTallNarrow ? 'tall-narrow' : 'normal');
+
+        // Lets app.js re-size things that read raw pixel dimensions instead
+        // of CSS (e.g. the StPageFlip book, which must be sized in this same
+        // local/pre-zoom coordinate space to render correctly).
+        window.dispatchEvent(new CustomEvent('wird:scalechange'));
       }
 
       // A short setTimeout debounce, not requestAnimationFrame: rAF only

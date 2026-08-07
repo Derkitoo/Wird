@@ -562,55 +562,10 @@ document.addEventListener('DOMContentLoaded', () => {
       btnNextPage.addEventListener('click', () => goToNextPage());
     }
 
-    // Swipe navigation on the reader content: swipe right = next page, swipe left = previous page
-    if (quranContainer) {
-      let touchStartX = 0;
-      let touchStartY = 0;
-      let touchDeltaX = 0;
-      // null = undecided, true = horizontal swipe in progress, false = vertical scroll, let the browser handle it
-      let isHorizontalSwipe = null;
-      const MIN_SWIPE_DISTANCE = 50;
-      const DIRECTION_LOCK_THRESHOLD = 10;
-
-      quranContainer.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchDeltaX = 0;
-        isHorizontalSwipe = null;
-      }, { passive: true });
-
-      // Non-passive: once we're confident the gesture is horizontal, we must
-      // preventDefault() here or the browser hijacks it as a vertical scroll
-      // (the <main> ancestor is scrollable) and touchend never reflects the swipe.
-      quranContainer.addEventListener('touchmove', (e) => {
-        const deltaX = e.touches[0].clientX - touchStartX;
-        const deltaY = e.touches[0].clientY - touchStartY;
-
-        if (isHorizontalSwipe === null && (Math.abs(deltaX) > DIRECTION_LOCK_THRESHOLD || Math.abs(deltaY) > DIRECTION_LOCK_THRESHOLD)) {
-          isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
-        }
-
-        if (isHorizontalSwipe) {
-          e.preventDefault();
-          touchDeltaX = deltaX;
-        }
-      }, { passive: false });
-
-      const finishSwipe = () => {
-        if (isHorizontalSwipe && Math.abs(touchDeltaX) >= MIN_SWIPE_DISTANCE) {
-          if (touchDeltaX > 0) {
-            goToNextPage();
-          } else {
-            goToPrevPage();
-          }
-        }
-        isHorizontalSwipe = null;
-        touchDeltaX = 0;
-      };
-
-      quranContainer.addEventListener('touchend', finishSwipe, { passive: true });
-      quranContainer.addEventListener('touchcancel', finishSwipe, { passive: true });
-    }
+    // Swipe/drag page-turning is handled natively by the StPageFlip engine
+    // itself (see initPageFlipEngine) — it owns touch handling on #quran-book
+    // for the flip-drag gesture, so a second custom touch handler here would
+    // race it and risk double-flipping on a single swipe.
   }
 
   // Web Audio API Paper Rustle Synthesizer (Zero external audio file needed!)
@@ -652,21 +607,46 @@ document.addEventListener('DOMContentLoaded', () => {
   let pageFlipInstance = null;
 
   function initPageFlipEngine() {
+    const containerElem = document.getElementById('quran-book-container');
+    let bookElem = document.getElementById('quran-book');
+    if (!bookElem) return;
+
     if (pageFlipInstance) {
+      // PageFlip.destroy() calls this.block.remove() internally — it removes
+      // the *host element itself* (#quran-book), not just its own state,
+      // despite the name suggesting a plain cleanup. Left as-is, every
+      // second initialization (switching Lecture/Mémoriser mode, switching
+      // Juz, or anything else that re-renders the reader) permanently wiped
+      // #quran-book out of the document. Preserve the already-built page
+      // content and reattach it to a freshly recreated host afterwards.
+      const preservedPages = [...bookElem.children];
       try { pageFlipInstance.destroy(); } catch (e) {}
       pageFlipInstance = null;
+
+      bookElem = document.createElement('div');
+      bookElem.id = 'quran-book';
+      if (containerElem) containerElem.appendChild(bookElem);
+      preservedPages.forEach(el => bookElem.appendChild(el));
     }
 
-    const bookElem = document.getElementById('quran-book');
-    const containerElem = document.getElementById('quran-book-container');
-    if (!bookElem || typeof St === 'undefined' || typeof St.PageFlip === 'undefined') return;
+    if (typeof St === 'undefined' || typeof St.PageFlip === 'undefined') return;
 
     const pageElems = bookElem.querySelectorAll('.quran-page-sheet');
     if (pageElems.length === 0) return;
 
-    const isMobile = window.innerWidth < 768;
-    const calcWidth = Math.min(window.innerWidth - 24, 460);
-    const calcHeight = Math.min(window.innerHeight - 220, 750);
+    // #app-container is scaled via CSS `zoom` for the responsive system
+    // (see index.html <head>), so window.innerWidth/innerHeight are the REAL
+    // screen size while this element actually lives in a "local" coordinate
+    // space that's smaller by the current scale factor. Sizing the book off
+    // the raw window dimensions made it render far too large for its zoomed
+    // container — dividing by the scale here keeps it consistent with
+    // everything else, and zoom re-inflates it to the correct final size.
+    const textScale = parseFloat(document.documentElement.style.getPropertyValue('--text-scale')) || 1;
+    const localVw = window.innerWidth / textScale;
+    const localVh = window.innerHeight / textScale;
+
+    const calcWidth = Math.min(localVw - 24, 600);
+    const calcHeight = Math.min(localVh - 180, 920);
 
     if (containerElem) {
       containerElem.style.maxWidth = `${calcWidth}px`;
@@ -683,9 +663,9 @@ document.addEventListener('DOMContentLoaded', () => {
         height: calcHeight,
         size: 'fixed', // 'fixed' forces 1 single page canvas frame!
         minWidth: 280,
-        maxWidth: 480,
+        maxWidth: 620,
         minHeight: 400,
-        maxHeight: 900,
+        maxHeight: 940,
         maxShadowOpacity: 0.55,
         showCover: true, // Forces single-page view in StPageFlip!
         mobileScrollSupport: false,
@@ -695,6 +675,25 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       pageFlipInstance.loadFromHTML(pageElems);
+
+      // The page-sheet frame has a fixed size, but the verse content inside
+      // it (Arabic text + translation, however many verses share this page)
+      // doesn't — without this, content taller than the frame was silently
+      // clipped by `overflow:hidden` and most of the page was invisible.
+      // Shrinks that specific page's text just enough to fit, page by page,
+      // rather than enabling scroll (which conflicted with the flip-drag
+      // gesture in earlier attempts at this — see git history).
+      // StPageFlip renders each sheet at its natural (auto) height first —
+      // where scrollHeight trivially equals clientHeight, since nothing is
+      // constraining it yet — and only applies the fixed `calcHeight` frame
+      // afterwards, asynchronously. Measuring before that constraint lands
+      // always finds "no overflow" against the wrong (unconstrained) height.
+      // Poll until the sheet's own clientHeight has actually shrunk down to
+      // (approximately) the fixed height we configured, confirming the real
+      // constraint is in effect, then fit.
+      waitForFixedHeight(pageElems[0], calcHeight, () => {
+        bookElem.querySelectorAll('.quran-page-sheet').forEach(fitPageSheetContent);
+      });
 
       pageFlipInstance.on('flip', (e) => {
         playPaperRustleSound();
@@ -707,9 +706,75 @@ document.addEventListener('DOMContentLoaded', () => {
           schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
         }
         updatePagePaginationUI();
+
+        const activeSheet = bookElem.querySelector(`.quran-page-sheet[data-page-index="${e.data}"]`);
+        if (activeSheet) {
+          waitForFixedHeight(activeSheet, calcHeight, () => fitPageSheetContent(activeSheet));
+        }
       });
     } catch (err) {
       console.warn("Failed to initialize StPageFlip Engine:", err);
+    }
+  }
+
+  // Polls an element's clientHeight until it has shrunk down to
+  // (approximately) targetHeight, or a max attempt budget is hit, then
+  // calls back. StPageFlip renders each page-sheet at its natural (auto)
+  // height first and only applies the fixed frame height asynchronously
+  // afterwards — measuring for overflow before that lands always finds
+  // "fits" against the wrong (unconstrained, self-sized) height, since
+  // scrollHeight trivially equals clientHeight when nothing is constraining
+  // it yet. A fixed delay isn't reliable here since this happens on an
+  // unpredictable schedule.
+  function waitForFixedHeight(el, targetHeight, onReady, attempt) {
+    attempt = attempt || 0;
+    const h = el.clientHeight;
+    if ((h > 0 && h <= targetHeight + 20) || attempt >= 40) {
+      onReady();
+      return;
+    }
+    setTimeout(() => waitForFixedHeight(el, targetHeight, onReady, attempt + 1), 40);
+  }
+
+  // Shrinks a single page-sheet's text until its content fits within its
+  // fixed frame. Sheets that already fit are left untouched (loop just
+  // never runs). Handles both layouts: the dense read-mode .mushaf-flow
+  // (a single flowing block per surah) and the memorize-mode per-verse
+  // .verse-text-ar/.verse-text-fr/.verse-text-trans cards.
+  function fitPageSheetContent(pageSheet) {
+    const flowEls = pageSheet.querySelectorAll('.mushaf-flow');
+    const arabicEls = pageSheet.querySelectorAll('.verse-text-ar, [id^="full-ar-"]');
+    const frEls = pageSheet.querySelectorAll('.verse-text-fr');
+    const transEls = pageSheet.querySelectorAll('.verse-text-trans');
+    if (flowEls.length === 0 && arabicEls.length === 0 && frEls.length === 0) return;
+
+    const MIN_FLOW = 12;
+    const MIN_AR = 15;
+    const MIN_FR = 10;
+    const MIN_TRANS = 9;
+
+    let flowSize = state.arabicFontSize;
+    let arSize = state.arabicFontSize;
+    let frSize = 13;
+    let transSize = 11;
+
+    const apply = () => {
+      flowEls.forEach(el => { el.style.fontSize = `${flowSize}px`; });
+      arabicEls.forEach(el => { el.style.fontSize = `${arSize}px`; });
+      frEls.forEach(el => { el.style.fontSize = `${frSize}px`; });
+      transEls.forEach(el => { el.style.fontSize = `${transSize}px`; });
+    };
+    apply();
+
+    let iterations = 0;
+    while (pageSheet.scrollHeight > pageSheet.clientHeight && iterations < 30) {
+      if (flowSize > MIN_FLOW) flowSize -= 1;
+      else if (arSize > MIN_AR) arSize -= 1;
+      else if (frSize > MIN_FR) frSize -= 1;
+      else if (transSize > MIN_TRANS) transSize -= 1;
+      else break;
+      apply();
+      iterations++;
     }
   }
 
@@ -1091,42 +1156,46 @@ document.addEventListener('DOMContentLoaded', () => {
       pageSheet.dataset.pageIndex = pIdx;
 
       const pageItems = allVerses.filter(item => item.verse.page === pNum);
-      let activeSurahHeaderNum = null;
 
-      pageItems.forEach(item => {
-        const v = item.verse;
-        const surah = item.surah;
-        
-        if (activeSurahHeaderNum !== surah.number) {
-          activeSurahHeaderNum = surah.number;
-          
-          const headerCard = document.createElement('div');
-          headerCard.className = 'glass-card';
-          headerCard.style.padding = '12px 16px';
-          headerCard.style.marginBottom = '14px';
-          headerCard.style.textAlign = 'center';
-          headerCard.style.borderLeft = '2px solid var(--primary)';
-          headerCard.innerHTML = `
-            <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
-            <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
-            <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
-          `;
-          pageSheet.appendChild(headerCard);
-        }
+      if (state.readerMode === 'memorize') {
+        // Memorize mode keeps the per-verse card layout: word-masking and
+        // SRS rating both need a distinct, individually-interactive block
+        // per verse, so it isn't rendered as a dense continuous page.
+        let activeSurahHeaderNum = null;
 
-        const block = document.createElement('div');
-        block.className = 'verse-block';
-        block.id = `verse-${v.number}`;
-        block.dataset.verseNum = v.number;
-        block.dataset.surahNum = surah.number;
-        block.dataset.audioUrl = v.audio;
+        pageItems.forEach(item => {
+          const v = item.verse;
+          const surah = item.surah;
 
-        const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+          if (activeSurahHeaderNum !== surah.number) {
+            activeSurahHeaderNum = surah.number;
 
-        let arabicHtml = '';
-        const words = v.textAr.split(/\s+/);
-        
-        if (state.readerMode === 'memorize') {
+            const headerCard = document.createElement('div');
+            headerCard.className = 'glass-card';
+            headerCard.style.padding = '12px 16px';
+            headerCard.style.marginBottom = '14px';
+            headerCard.style.textAlign = 'center';
+            headerCard.style.borderLeft = '2px solid var(--primary)';
+            headerCard.innerHTML = `
+              <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
+              <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
+              <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
+            `;
+            pageSheet.appendChild(headerCard);
+          }
+
+          const block = document.createElement('div');
+          block.className = 'verse-block';
+          block.id = `verse-${v.number}`;
+          block.dataset.verseNum = v.number;
+          block.dataset.surahNum = surah.number;
+          block.dataset.audioUrl = v.audio;
+
+          const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+
+          let arabicHtml = '';
+          const words = v.textAr.split(/\s+/);
+
           if (state.hifzLevel === 1) {
             arabicHtml = v.textAr;
           } else if (state.hifzLevel === 2) {
@@ -1151,47 +1220,78 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             `;
           }
-        } else {
-          arabicHtml = v.textAr;
-        }
 
-        block.innerHTML = `
-          <div class="verse-header-row">
-            <span class="verse-badge">${surah.nameFr} (${v.numberInSurah})</span>
-            <div class="verse-actions">
-              ${state.readerMode === 'memorize' ? `
+          block.innerHTML = `
+            <div class="verse-header-row">
+              <span class="verse-badge">${surah.nameFr} (${v.numberInSurah})</span>
+              <div class="verse-actions">
                 <button class="verse-action-btn record-recitation" title="Valider par ma voix" data-global-num="${v.number}" style="color:var(--text-secondary)">
                   <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
                 </button>
-              ` : ''}
-              <button class="verse-action-btn play-verse" title="Écouter" data-global-num="${v.number}">
-                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-              <button class="verse-action-btn view-tafsir" title="Tafsir" data-global-num="${v.number}">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-              </button>
+                <button class="verse-action-btn play-verse" title="Écouter" data-global-num="${v.number}">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="verse-action-btn view-tafsir" title="Tafsir" data-global-num="${v.number}">
+                  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                </button>
+              </div>
             </div>
-          </div>
-          <div class="verse-text-ar-container">
-            ${state.hifzLevel === 4 && state.readerMode === 'memorize' 
-              ? arabicHtml 
-              : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
-            }
-          </div>
-          ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
-          <div class="verse-text-fr">${v.translation}</div>
-          
-          <!-- SRS Rating Panel -->
-          ${state.readerMode === 'memorize' ? `
+            <div class="verse-text-ar-container">
+              ${state.hifzLevel === 4
+                ? arabicHtml
+                : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
+              }
+            </div>
+            ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
+            <div class="verse-text-fr">${v.translation}</div>
+
             <div class="srs-buttons-row" data-verse-key="${verseKey}">
               <button class="btn-srs btn-srs-hard" data-rating="hard">🔴 Revoir</button>
               <button class="btn-srs btn-srs-medium" data-rating="medium">🟡 Moyen</button>
               <button class="btn-srs btn-srs-easy" data-rating="easy">🟢 Facile</button>
             </div>
-          ` : ''}
-        `;
-        pageSheet.appendChild(block);
-      });
+          `;
+          pageSheet.appendChild(block);
+        });
+      } else {
+        // Read mode: a dense, continuous Mushaf-style page — just the Arabic
+        // text flowing per surah, each verse closed by a small tappable
+        // ayah-end marker (opens the tafsir drawer) instead of a full card.
+        // This is what actually lets a whole page's worth of verses (can be
+        // 20-30+ short verses on a single real Mushaf page) fit in the frame
+        // at all, rather than the per-verse badges/buttons/translation of
+        // the card layout, which simply can't fit that many at once.
+        let activeSurahHeaderNum = null;
+        let currentFlow = null;
+
+        pageItems.forEach(item => {
+          const v = item.verse;
+          const surah = item.surah;
+
+          if (activeSurahHeaderNum !== surah.number) {
+            activeSurahHeaderNum = surah.number;
+
+            const header = document.createElement('div');
+            header.className = 'mushaf-surah-header';
+            header.textContent = `${surah.nameFr} • ${surah.nameAr}`;
+            pageSheet.appendChild(header);
+
+            currentFlow = document.createElement('div');
+            currentFlow.className = 'mushaf-flow';
+            currentFlow.dir = 'rtl';
+            pageSheet.appendChild(currentFlow);
+          }
+
+          const verseSpan = document.createElement('span');
+          verseSpan.className = 'mushaf-verse';
+          verseSpan.id = `verse-${v.number}`;
+          verseSpan.dataset.verseNum = v.number;
+          verseSpan.dataset.surahNum = surah.number;
+          verseSpan.dataset.audioUrl = v.audio;
+          verseSpan.innerHTML = `${v.textAr} <span class="ayah-marker" data-global-num="${v.number}">${v.numberInSurah}</span> `;
+          currentFlow.appendChild(verseSpan);
+        });
+      }
 
       bookElem.appendChild(pageSheet);
     });
@@ -1222,6 +1322,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function setupVerseInteractions() {
     const targetParent = document.getElementById('quran-book') || quranContainer;
     if (!targetParent) return;
+
+    // Read-mode dense Mushaf page: tap the small ayah-end marker to open
+    // tafsir (translation + explanation) for that verse and save it as the
+    // reading position — there's no per-verse button row in this layout.
+    targetParent.querySelectorAll('.ayah-marker').forEach(marker => {
+      marker.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const num = parseInt(marker.dataset.globalNum, 10);
+        openTafsirDrawer(num);
+        saveReadingPosition(num);
+      });
+    });
+
     const blocks = targetParent.querySelectorAll('.verse-block');
     blocks.forEach(block => {
       // 1. Play button
@@ -2647,6 +2760,30 @@ document.addEventListener('DOMContentLoaded', () => {
   if (drawerOverlay) {
     drawerOverlay.addEventListener('click', closeSettingsDrawer);
   }
+
+  // Re-size the StPageFlip book when the responsive engine's scale changes
+  // (e.g. unfolding mid-read) — it's sized off raw pixels, not CSS, so it
+  // needs an explicit nudge rather than reacting to CSS on its own.
+  // Goes through renderQuranText(true) rather than calling
+  // initPageFlipEngine() directly: that rebuilds fresh, still-unwrapped page
+  // content before reinitializing, the same safe sequence that switching
+  // Lecture/Mémoriser mode already relies on. Calling initPageFlipEngine()
+  // directly here instead hit a second-order bug — by that point #quran-book
+  // only contains the *already flip-wrapped* structure from the previous
+  // init, and reattaching that wrapper across destroy() came back empty.
+  // Guarded against spurious/no-op dispatches (e.g. a scrollbar appearing
+  // during normal page navigation can nudge innerWidth by a pixel): a
+  // full re-render is expensive enough that it should only happen on a
+  // real scale change.
+  let lastKnownTextScale = parseFloat(document.documentElement.style.getPropertyValue('--text-scale')) || 1;
+  window.addEventListener('wird:scalechange', () => {
+    const newScale = parseFloat(document.documentElement.style.getPropertyValue('--text-scale')) || 1;
+    if (Math.abs(newScale - lastKnownTextScale) < 0.02) return;
+    lastKnownTextScale = newScale;
+    if (state.currentView === 'reader' && pageFlipInstance) {
+      renderQuranText(true);
+    }
+  });
 
   // Initialize UI & load data
   initSelectors();
