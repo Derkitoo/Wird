@@ -658,26 +658,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const bookElem = document.getElementById('quran-book');
+    const containerElem = document.getElementById('quran-book-container');
     if (!bookElem || typeof St === 'undefined' || typeof St.PageFlip === 'undefined') return;
 
     const pageElems = bookElem.querySelectorAll('.quran-page-sheet');
     if (pageElems.length === 0) return;
 
     const isMobile = window.innerWidth < 768;
-    const bookWidth = isMobile ? Math.min(window.innerWidth - 24, 440) : 480;
-    const bookHeight = isMobile ? Math.min(window.innerHeight - 260, 680) : 740;
+    const calcWidth = Math.min(window.innerWidth - 24, 460);
+    const calcHeight = Math.min(window.innerHeight - 240, 720);
+
+    if (containerElem) {
+      containerElem.style.maxWidth = `${calcWidth}px`;
+      containerElem.style.margin = '0 auto';
+    }
+    if (bookElem) {
+      bookElem.style.maxWidth = `${calcWidth}px`;
+      bookElem.style.margin = '0 auto';
+    }
 
     try {
       pageFlipInstance = new St.PageFlip(bookElem, {
-        width: bookWidth,
-        height: bookHeight,
-        size: 'stretch',
+        width: calcWidth,
+        height: calcHeight,
+        size: 'fixed', // 'fixed' forces 1 single page canvas frame!
         minWidth: 280,
-        maxWidth: 650,
+        maxWidth: 480,
         minHeight: 400,
-        maxHeight: 1000,
+        maxHeight: 850,
         maxShadowOpacity: 0.55,
-        showCover: false,
+        showCover: true, // Forces single-page view in StPageFlip!
         mobileScrollSupport: false,
         usePortrait: true, // Always 1 single page centered on screen
         startPage: state.currentPageIndex || 0,

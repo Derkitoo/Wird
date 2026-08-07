@@ -650,9 +650,10 @@ main::-webkit-scrollbar {
   color: #070913;
 }
 
-/* StPageFlip 3D Book Layout & Page Sheets */
+/* StPageFlip Single Page 3D Book Layout */
 #quran-book-container {
   width: 100%;
+  max-width: 460px;
   margin: 0 auto;
   position: relative;
   display: flex;
@@ -661,6 +662,8 @@ main::-webkit-scrollbar {
 }
 
 #quran-book {
+  width: 100%;
+  max-width: 460px;
   margin: 0 auto;
 }
 
@@ -672,11 +675,16 @@ main::-webkit-scrollbar {
   border: 2px double var(--reading-border);
   border-radius: var(--radius-md);
   box-shadow: var(--reading-shadow);
-  padding: 14px 20px 18px;
+  padding: 14px 18px 20px;
   position: relative;
   overflow-y: auto;
+  scrollbar-width: none;
   box-sizing: border-box;
   color: var(--reading-text);
+}
+
+.quran-page-sheet::-webkit-scrollbar {
+  display: none;
 }
 
 .quran-page-sheet::before {
