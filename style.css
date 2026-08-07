@@ -650,56 +650,31 @@ main::-webkit-scrollbar {
   color: #070913;
 }
 
-/* StPageFlip Single Page 3D Book Layout */
-#quran-book-container {
+/* Single-page reader: no book/frame library — the page's height simply
+   follows its content, and the reader's scrollable main area handles
+   anything taller than the viewport. Navigation replaces the content and
+   plays a short slide transition (see .page-slide-next/.page-slide-prev). */
+#reader-viewport {
   width: 100%;
-  max-width: 460px;
-  margin: 0 auto;
-  position: relative;
   display: flex;
   justify-content: center;
-  align-items: center;
 }
 
-#quran-book {
+.quran-page-sheet {
   width: 100%;
-  max-width: 460px;
+  max-width: 600px;
   margin: 0 auto;
-}
-
-.quran-page-sheet,
-#quran-container.quran-render-container {
   display: flex;
   flex-direction: column;
   background: linear-gradient(165deg, var(--reading-bg-a), var(--reading-bg-b));
   border: 2px double var(--reading-border);
   border-radius: var(--radius-md);
   box-shadow: var(--reading-shadow);
-  padding: 14px 18px 20px;
+  padding: 18px 20px 24px;
   position: relative;
-  overflow: hidden;
-  touch-action: pan-x;
   box-sizing: border-box;
   color: var(--reading-text);
-}
-
-/* Every page shares one uniform font size (see computeUniformFlowFontSize
-   in app.js), so a page with fewer verses than the densest one naturally
-   has leftover height in its fixed frame — center its content instead of
-   leaving it pinned to the top with dead space below.
-   This centering lives on an inner wrapper (.quran-page-inner), not
-   .quran-page-sheet itself: StPageFlip sets `display: block` inline on
-   the sheet once it takes it over, which silently overrides the CSS flex
-   display above and makes justify-content on the sheet a no-op. */
-.quran-page-inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-}
-
-.quran-page-sheet::-webkit-scrollbar {
-  display: none;
+  min-height: 320px;
 }
 
 .quran-page-sheet::before {
@@ -714,78 +689,26 @@ main::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* Authentic Central Spine Crease for bound Mushaf pages */
-#quran-container.quran-render-container::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 14px;
-  background: linear-gradient(to left, rgba(0, 0, 0, 0.25), transparent);
-  pointer-events: none;
-  z-index: 10;
+/* Page-turn transition: a brief slide + fade in the direction of travel,
+   matching the swipe/button gesture (right = next, left = previous). Pure
+   CSS, applied/removed via classList in renderQuranText() — no external
+   library, so there's nothing async to race or double-fire. */
+.page-slide-next {
+  animation: pageSlideNext 0.28s ease-out;
 }
 
-/* Skeuomorphic Page Curl Turn Animations */
-#quran-container.turn-next {
-  animation: iosPageCurlNext 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  transform-origin: right center;
+.page-slide-prev {
+  animation: pageSlidePrev 0.28s ease-out;
 }
 
-#quran-container.turn-prev {
-  animation: iosPageCurlPrev 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  transform-origin: left center;
+@keyframes pageSlideNext {
+  from { transform: translateX(24px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes iosPageCurlNext {
-  0% {
-    transform: rotateY(0deg) skewY(0deg);
-    box-shadow: var(--reading-shadow);
-    filter: brightness(1);
-  }
-  35% {
-    transform: rotateY(-40deg) skewY(-2.5deg) scale(0.97);
-    box-shadow: -30px 15px 40px rgba(0, 0, 0, 0.7), inset -20px 0 25px rgba(0, 0, 0, 0.4);
-    filter: brightness(0.92);
-  }
-  70% {
-    transform: rotateY(-80deg) skewY(-1.2deg) scale(0.95);
-    box-shadow: -50px 20px 55px rgba(0, 0, 0, 0.8), inset -35px 0 40px rgba(0, 0, 0, 0.6);
-    opacity: 0.6;
-    filter: brightness(0.82);
-  }
-  100% {
-    transform: rotateY(0deg) skewY(0deg) scale(1);
-    box-shadow: var(--reading-shadow);
-    opacity: 1;
-    filter: brightness(1);
-  }
-}
-
-@keyframes iosPageCurlPrev {
-  0% {
-    transform: rotateY(0deg) skewY(0deg);
-    box-shadow: var(--reading-shadow);
-    filter: brightness(1);
-  }
-  35% {
-    transform: rotateY(40deg) skewY(2.5deg) scale(0.97);
-    box-shadow: 30px 15px 40px rgba(0, 0, 0, 0.7), inset 20px 0 25px rgba(0, 0, 0, 0.4);
-    filter: brightness(0.92);
-  }
-  70% {
-    transform: rotateY(80deg) skewY(1.2deg) scale(0.95);
-    box-shadow: 50px 20px 55px rgba(0, 0, 0, 0.8), inset 35px 0 40px rgba(0, 0, 0, 0.6);
-    opacity: 0.6;
-    filter: brightness(0.82);
-  }
-  100% {
-    transform: rotateY(0deg) skewY(0deg) scale(1);
-    box-shadow: var(--reading-shadow);
-    opacity: 1;
-    filter: brightness(1);
-  }
+@keyframes pageSlidePrev {
+  from { transform: translateX(-24px); opacity: 0.4; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .verse-block {
@@ -857,8 +780,8 @@ main::-webkit-scrollbar {
   user-select: none;
 }
 
-/* Dense, continuous Mushaf-style page (Lecture mode inside the page-flip
-   book) — plain flowing Arabic text instead of a card per verse, closed by
+/* Dense, continuous Mushaf-style page (Lecture mode) — plain flowing
+   Arabic text instead of a card per verse, closed by
    a small tappable ayah-end marker instead of a full action-button row, so
    a whole page's worth of verses actually fits in the fixed page frame. */
 .mushaf-surah-header {
@@ -903,18 +826,25 @@ main::-webkit-scrollbar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.4em;
-  height: 1.4em;
-  padding: 0 2px;
-  margin: 0 2px;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 3px;
+  margin: 0 3px;
   border-radius: 50%;
   border: 1px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--primary);
   font-family: var(--font-ui);
   font-size: 0.55em;
   font-weight: 700;
   vertical-align: middle;
   cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.ayah-marker:active {
+  background: var(--primary);
+  color: #070913;
 }
 
 /* Interactive Hide/Show styling in memorization */
@@ -1047,19 +977,20 @@ main::-webkit-scrollbar {
 /* Audio Player Persistent Floating Widget */
 .audio-player-widget {
   position: absolute;
-  bottom: 85px;
-  left: 20px;
-  right: 20px;
-  background: rgba(13, 17, 30, 0.95);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-lg);
-  padding: 12px 16px;
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+  background: rgba(13, 17, 30, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-card));
+  border-radius: 999px;
+  padding: 8px 10px 8px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-lg);
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px color-mix(in srgb, var(--primary) 8%, transparent);
   z-index: 45;
   animation: slideUp 0.3s ease-out forwards;
 }
