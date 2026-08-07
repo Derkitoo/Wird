@@ -613,27 +613,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function triggerPageTurnAnimation(direction, callback) {
+    if (!quranContainer) {
+      if (callback) callback();
+      return;
+    }
+    quranContainer.classList.remove('turn-next', 'turn-prev');
+    void quranContainer.offsetWidth;
+    quranContainer.classList.add(direction === 'next' ? 'turn-next' : 'turn-prev');
+
+    setTimeout(() => {
+      if (callback) callback();
+    }, 210);
+
+    setTimeout(() => {
+      if (quranContainer) quranContainer.classList.remove('turn-next', 'turn-prev');
+    }, 480);
+  }
+
   function goToPrevPage() {
     if (state.currentPageIndex > 0) {
-      state.currentPageIndex--;
-      stopAudio();
-      renderQuranText(true);
-      const pageItems = getVersesOfCurrentPage();
-      if (pageItems.length > 0) {
-        saveReadingPosition(pageItems[0].verse.number);
-      }
+      triggerPageTurnAnimation('prev', () => {
+        state.currentPageIndex--;
+        stopAudio();
+        renderQuranText(true);
+        const pageItems = getVersesOfCurrentPage();
+        if (pageItems.length > 0) {
+          saveReadingPosition(pageItems[0].verse.number);
+        }
+      });
     }
   }
 
   function goToNextPage() {
     if (state.pagesList && state.currentPageIndex < state.pagesList.length - 1) {
-      state.currentPageIndex++;
-      stopAudio();
-      renderQuranText(true);
-      const pageItems = getVersesOfCurrentPage();
-      if (pageItems.length > 0) {
-        saveReadingPosition(pageItems[0].verse.number);
-      }
+      triggerPageTurnAnimation('next', () => {
+        state.currentPageIndex++;
+        stopAudio();
+        renderQuranText(true);
+        const pageItems = getVersesOfCurrentPage();
+        if (pageItems.length > 0) {
+          saveReadingPosition(pageItems[0].verse.number);
+        }
+      });
     }
   }
 
