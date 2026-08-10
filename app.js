@@ -949,6 +949,13 @@ document.addEventListener('DOMContentLoaded', () => {
       readerSurahTitle.textContent = surahsListed.length > 25 ? `${data.surahs[0].nameFr}...` : surahsListed;
       readerJuzTitle.textContent = `Juz ${state.selectedJuz} • ${data.surahs.length} Sourates`;
 
+      // Hide the loader before rendering: fitReaderPageToViewport() measures
+      // #quran-page's distance from the top of the viewport, and the loader
+      // (spinner + padding) sitting above it while still visible pushes that
+      // measurement down enough that the page misses the available space
+      // entirely and skips sizing — leaving the very first page rendered at
+      // its unshrunk default size until some later action re-triggers a fit.
+      readerLoader.style.display = 'none';
       renderQuranText();
       await checkJuzAudioCacheStatus();
 
@@ -977,6 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     readerSurahTitle.textContent = fallbackSurah.surahNameFr;
     readerJuzTitle.textContent = `Juz 30 (Hors-ligne)`;
+    readerLoader.style.display = 'none'; // see loadJuzData(): must hide before rendering, not after
     renderQuranText();
     checkJuzAudioCacheStatus();
   }
