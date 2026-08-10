@@ -520,13 +520,17 @@ main::-webkit-scrollbar {
   filter: drop-shadow(0 0 8px var(--primary));
 }
 
+/* .garden-container keeps a fixed dark background in every theme (the
+   branch/flower SVG strokes are drawn for a dark backdrop), so its text
+   must use fixed light colors too, not theme variables — those flip to
+   near-black in light/sepia and would go invisible here. */
 .garden-title {
   position: absolute;
   top: 12px;
   left: 16px;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -536,7 +540,7 @@ main::-webkit-scrollbar {
   position: absolute;
   bottom: 12px;
   font-size: 0.6875rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.5);
   pointer-events: none;
 }
 
@@ -1119,15 +1123,18 @@ main::-webkit-scrollbar {
   flex-direction: column;
 }
 
+/* .audio-player-widget keeps a fixed dark background in every theme, so its
+   text uses fixed light colors too — see the .tafsir-drawer note above for
+   why theme variables break here (they flip to near-black in light/sepia). */
 .audio-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-strong);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .audio-subtitle {
   font-size: 0.625rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .audio-controls {
@@ -1139,7 +1146,7 @@ main::-webkit-scrollbar {
 .audio-control-btn {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   transition: var(--transition-smooth);
 }
@@ -1535,16 +1542,18 @@ main::-webkit-scrollbar {
   flex: 1;
 }
 
+/* .push-toast keeps a fixed dark background in every theme — same reasoning
+   as .tafsir-drawer / .audio-player-widget above, fixed light text here too. */
 .push-toast-title {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--text-strong);
+  color: rgba(255, 255, 255, 0.92);
   margin-bottom: 2px;
 }
 
 .push-toast-text {
   font-size: 0.6875rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 @keyframes toastSlideIn {
@@ -1819,7 +1828,9 @@ main::-webkit-scrollbar {
   z-index: 1;
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--text-strong);
+  /* The ring's ::before is a fixed dark disc in every theme, so this needs a
+     fixed light color too — see the .tafsir-drawer note above. */
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .hifz-surah-card-info {
