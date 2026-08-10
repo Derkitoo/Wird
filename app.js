@@ -123,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const quranContainer = document.getElementById('quran-page');
   const readerSurahTitle = document.getElementById('reader-surah-title');
   const readerJuzTitle = document.getElementById('reader-juz-title');
+  const btnToggleReaderControls = document.getElementById('btn-toggle-reader-controls');
+  const readerExtraControls = document.getElementById('reader-extra-controls');
 
   // Native Audio HTML5 Player
   const nativeAudioPlayer = document.getElementById('native-audio-player');
@@ -592,6 +594,30 @@ document.addEventListener('DOMContentLoaded', () => {
           goToPrevPage();
         }
       }, { passive: true });
+
+      // Tapping the page (outside a verse/marker/button, which already have
+      // their own tap actions) toggles the floating audio bar, independent
+      // of playback state — lets it be dismissed and brought back without
+      // needing to tap a fresh verse.
+      pageEl.addEventListener('click', (e) => {
+        const isInteractive = e.target.closest('.mushaf-verse, .ayah-marker, .verse-block, .verse-action-btn, .hifz-masked-word, .hifz-masked-full-wrapper, .btn-srs');
+        if (isInteractive) return;
+        if (!state.currentPlayingVerseNum || !audioWidget) return;
+        audioWidget.style.display = audioWidget.style.display === 'none' ? 'flex' : 'none';
+      });
+    }
+
+    // Chevron toggles every secondary reader control (text size, mode,
+    // Juz/reciter, audio download, Hifz toolbar) — collapsed by default.
+    if (btnToggleReaderControls && readerExtraControls) {
+      btnToggleReaderControls.addEventListener('click', () => {
+        const isOpen = readerExtraControls.style.display !== 'none';
+        readerExtraControls.style.display = isOpen ? 'none' : 'block';
+        btnToggleReaderControls.setAttribute('aria-expanded', String(!isOpen));
+        // Expanding/collapsing changes how much vertical space the page
+        // itself has available, so re-fit it to the new height.
+        fitReaderPageToViewport();
+      });
     }
   }
 

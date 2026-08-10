@@ -401,89 +401,99 @@
 
       <!-- ================= VIEW 2: READER (LECTURE) ================= -->
       <section id="view-reader" class="view">
-        <!-- Top Toolbar -->
+        <!-- Minimal top bar: title + a chevron that reveals every other
+             control below. Mirrors the reference reader app — just the page
+             on screen by default, secondary controls tucked away on demand. -->
         <div class="reader-controls-top">
-          <div class="text-size-controls">
-            <button id="btn-font-dec" class="btn-text-size" title="Diminuer la police">A-</button>
-            <button id="btn-font-inc" class="btn-text-size" title="Agrandir la police">A+</button>
-          </div>
-          
           <div class="surah-info-title">
             <h2 id="reader-surah-title">An-Naba</h2>
             <p id="reader-juz-title">Sourate 78 • Juz 30</p>
           </div>
-
-          <div class="mode-switches">
-            <button id="switch-read" class="switch-btn active">Lecture</button>
-            <button id="switch-memorize" class="switch-btn">Mémoriser</button>
-          </div>
-        </div>
-
-        <!-- Display Toggles (Translation & Phonetics) — only meaningful in
-             Mémoriser mode; Lecture mode's dense Mushaf page doesn't show
-             inline translation/phonetic text for these to control. -->
-        <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 4px 0; padding: 5px 12px; justify-content: space-around; font-size: 0.625rem; gap:8px;">
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-            <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
-          </label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-            <input type="checkbox" id="toggle-show-fr" checked style="accent-color: var(--primary);"> Traduction (FR)
-          </label>
-          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-            <input type="checkbox" id="toggle-show-trans" checked style="accent-color: var(--primary);"> Phonétique
-          </label>
-        </div>
-
-        <!-- Dropdowns for Juz and Reciter selections -->
-        <div class="reader-selectors-bar" style="display: flex; gap: 6px; margin-bottom: 4px;">
-          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
-            <!-- Populated via JS -->
-          </select>
-          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
-            <!-- Populated via JS -->
-          </select>
-        </div>
-
-        <!-- Audio Offline Cache Manager -->
-        <div class="glass-card" style="margin-bottom: 4px; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-          <span style="font-size: 0.625rem; color: var(--text-secondary); line-height: 1.3;">
-            <span id="audio-download-status" style="color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
-            <span style="color: var(--text-muted);"> · </span>
-            <span id="audio-download-detail" style="color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
-          </span>
-          <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; font-size: 0.625rem; border-radius:var(--radius-sm); font-weight:700; width:auto; justify-content:center; flex-shrink:0;">
-            📥 Télécharger
+          <button id="btn-toggle-reader-controls" class="btn-reader-controls-toggle" title="Options d'affichage" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
           </button>
         </div>
-        <!-- Progress bar for audio download -->
-        <div id="audio-download-progress-container" style="display: none; width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 6px; overflow:hidden;">
-          <div id="audio-download-progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;"></div>
-        </div>
 
-        <!-- Memorization (Hifz) Assistance toolbar -->
-        <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 6px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 8px 10px; border-radius: var(--radius-md);">
-          <div class="hifz-mini-stats">
-            <span class="hifz-mini-stat">🔥 <span class="hifz-streak-value">0</span> j</span>
-            <span class="hifz-mini-stat">⭐ Niv. <span class="hifz-level-value">1</span></span>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
-            <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
-              <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">🎯 Auto</button>
-              <button class="switch-btn" data-hifz-level="1" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Complet</button>
-              <button class="switch-btn" data-hifz-level="2" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">1er Mot</button>
-              <button class="switch-btn" data-hifz-level="3" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Troué</button>
-              <button class="switch-btn" data-hifz-level="4" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Masqué</button>
+        <!-- Everything below is hidden by default and only shown while the
+             chevron above is expanded. -->
+        <div id="reader-extra-controls" style="display:none;">
+          <div class="reader-extra-controls-row">
+            <div class="text-size-controls">
+              <button id="btn-font-dec" class="btn-text-size" title="Diminuer la police">A-</button>
+              <button id="btn-font-inc" class="btn-text-size" title="Agrandir la police">A+</button>
+            </div>
+            <div class="mode-switches">
+              <button id="switch-read" class="switch-btn active">Lecture</button>
+              <button id="switch-memorize" class="switch-btn">Mémoriser</button>
             </div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
-            <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
-            <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 3px 6px; border-radius: var(--radius-sm); font-size: 0.625rem; outline: none; cursor: pointer;">
-              <option value="1">1x (Normal)</option>
-              <option value="3">3x en boucle</option>
-              <option value="5">5x en boucle</option>
-              <option value="infinite">En boucle infinie</option>
+
+          <!-- Display Toggles (Translation & Phonetics) — only meaningful in
+               Mémoriser mode; Lecture mode's dense Mushaf page doesn't show
+               inline translation/phonetic text for these to control. -->
+          <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 4px 0; padding: 5px 12px; justify-content: space-around; font-size: 0.625rem; gap:8px;">
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+              <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+              <input type="checkbox" id="toggle-show-fr" checked style="accent-color: var(--primary);"> Traduction (FR)
+            </label>
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+              <input type="checkbox" id="toggle-show-trans" checked style="accent-color: var(--primary);"> Phonétique
+            </label>
+          </div>
+
+          <!-- Dropdowns for Juz and Reciter selections -->
+          <div class="reader-selectors-bar" style="display: flex; gap: 6px; margin-bottom: 4px;">
+            <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
+              <!-- Populated via JS -->
             </select>
+            <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <!-- Audio Offline Cache Manager -->
+          <div class="glass-card" style="margin-bottom: 4px; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span style="font-size: 0.625rem; color: var(--text-secondary); line-height: 1.3;">
+              <span id="audio-download-status" style="color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
+              <span style="color: var(--text-muted);"> · </span>
+              <span id="audio-download-detail" style="color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
+            </span>
+            <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; font-size: 0.625rem; border-radius:var(--radius-sm); font-weight:700; width:auto; justify-content:center; flex-shrink:0;">
+              📥 Télécharger
+            </button>
+          </div>
+          <!-- Progress bar for audio download -->
+          <div id="audio-download-progress-container" style="display: none; width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 6px; overflow:hidden;">
+            <div id="audio-download-progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;"></div>
+          </div>
+
+          <!-- Memorization (Hifz) Assistance toolbar -->
+          <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 6px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 8px 10px; border-radius: var(--radius-md);">
+            <div class="hifz-mini-stats">
+              <span class="hifz-mini-stat">🔥 <span class="hifz-streak-value">0</span> j</span>
+              <span class="hifz-mini-stat">⭐ Niv. <span class="hifz-level-value">1</span></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+              <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
+              <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
+                <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">🎯 Auto</button>
+                <button class="switch-btn" data-hifz-level="1" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Complet</button>
+                <button class="switch-btn" data-hifz-level="2" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">1er Mot</button>
+                <button class="switch-btn" data-hifz-level="3" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Troué</button>
+                <button class="switch-btn" data-hifz-level="4" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Masqué</button>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
+              <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
+              <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 3px 6px; border-radius: var(--radius-sm); font-size: 0.625rem; outline: none; cursor: pointer;">
+                <option value="1">1x (Normal)</option>
+                <option value="3">3x en boucle</option>
+                <option value="5">5x en boucle</option>
+                <option value="infinite">En boucle infinie</option>
+              </select>
+            </div>
           </div>
         </div>
 

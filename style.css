@@ -651,6 +651,48 @@ main::-webkit-scrollbar {
   color: #070913;
 }
 
+/* Chevron that reveals/hides every secondary reader control (text size,
+   mode switch, Juz/reciter, audio download, Hifz toolbar) — collapsed by
+   default so the Quran page itself gets almost the whole screen, matching
+   the minimal top bar of the reference reader app. */
+.btn-reader-controls-toggle {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-strong) 8%, transparent);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.btn-reader-controls-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  transition: transform 0.25s ease;
+}
+
+.btn-reader-controls-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.btn-reader-controls-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.reader-extra-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 /* Single-page reader: no book/frame library — the page's height simply
    follows its content, and the reader's scrollable main area handles
    anything taller than the viewport. Navigation replaces the content and
@@ -815,7 +857,15 @@ main::-webkit-scrollbar {
 .mushaf-verse {
   cursor: pointer;
   border-radius: 4px;
-  transition: var(--transition-smooth);
+  /* Scoped to just what .active-reciting actually changes — NOT `all`
+     (var(--transition-smooth)): fitReaderPageToViewport() sets font-size on
+     these spans directly and reads scrollHeight back synchronously to
+     binary-search the right size. A transitioned font-size animates over
+     0.35s instead of applying instantly, so every synchronous read during
+     that search (and even the very last one) sees a mid-animation, not-yet-
+     settled value — the search silently makes its decisions off numbers
+     that don't correspond to any font-size it actually asked for. */
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mushaf-verse.active-reciting {
@@ -840,7 +890,12 @@ main::-webkit-scrollbar {
   font-weight: 700;
   vertical-align: middle;
   cursor: pointer;
-  transition: var(--transition-smooth);
+  /* Scoped, not `all` (var(--transition-smooth)) — this marker's font-size
+     is relative (0.55em) to .mushaf-verse, so it changes size whenever
+     fitReaderPageToViewport() resizes the verse text; `all` would animate
+     that resize too and corrupt the synchronous height reads the fit
+     function depends on (see the note on .mushaf-verse). */
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ayah-marker:active {
