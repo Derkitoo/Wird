@@ -123,8 +123,7 @@ const QuranAPI = {
 
   /**
    * Looks up the tafsir text covering a given surah:ayah in a ranges map
-   * returned by fetchTafsirFrRanges/fetchTafsirArRanges. Returns null if the
-   * surah/verse isn't covered.
+   * returned by fetchTafsirFrRanges. Returns null if the surah/verse isn't covered.
    */
   findTafsirText(ranges, surahNum, ayahNum) {
     const list = ranges[String(surahNum)];
@@ -133,6 +132,39 @@ const QuranAPI = {
       if (ayahNum >= from && ayahNum <= to) return text;
     }
     return null;
+  },
+
+  // Tafsir Ibn Kathir (Arabic), full Quran, classical reference commentary —
+  // shown as an alternate source alongside the French Al-Mukhtasar. Fetched
+  // on demand per surah (some surahs run several MB, far too big to bundle)
+  // from spa5k/tafsir_api via jsDelivr (CORS-enabled), pinned to a fixed
+  // commit so an upstream change can't silently alter/break it. Cached per
+  // surah in IndexedDB after first fetch.
+  IBN_KATHIR_COMMIT: '05d5ba765d77c6ca6d43c30f0e1c273deb137454',
+  _ibnKathirSurahPromises: {},
+
+  async fetchIbnKathirSurah(surahNum) {
+    if (this._ibnKathirSurahPromises[surahNum]) return this._ibnKathirSurahPromises[surahNum];
+    const cacheKey = `ibn_kathir_ar_surah_${surahNum}`;
+    this._ibnKathirSurahPromises[surahNum] = (async () => {
+      const cached = await getCachedTafsirIndex(cacheKey);
+      if (cached) return cached;
+
+      const url = `https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@${this.IBN_KATHIR_COMMIT}/tafsir/ar-tafsir-ibn-kathir/${surahNum}.json`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Ibn Kathir fetch failed for surah ${surahNum}`);
+      const json = await res.json();
+      const ayahs = Array.isArray(json) ? json : (json.ayahs || []);
+
+      const byAyah = {};
+      ayahs.forEach((item) => {
+        if (item.text && item.text.trim()) byAyah[item.ayah] = item.text;
+      });
+
+      await cacheTafsirIndex(cacheKey, byAyah);
+      return byAyah;
+    })();
+    return this._ibnKathirSurahPromises[surahNum];
   },
 
   // Curated list of popular reciters

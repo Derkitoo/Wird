@@ -2729,6 +2729,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tafsirLessonBox = document.getElementById('tafsir-lesson-box');
   const tafsirNuzul = document.getElementById('tafsir-nuzul');
   const tafsirNuzulSection = document.getElementById('tafsir-nuzul-section');
+  const tafsirTabBtns = document.querySelectorAll('.tafsir-tab-btn');
 
   // Real, sourced Asbab an-Nuzul (occasions of revelation). No fabricated
   // filler: verses/surahs without a genuine entry simply hide the section.
@@ -2751,6 +2752,61 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   let tafsirRequestId = 0;
+  let tafsirCurrentVerse = null; // { sNum, vNumInSurah }
+  let tafsirSource = 'fr'; // 'fr' (Al-Mukhtasar) or 'ar' (Ibn Kathir)
+
+  const TAFSIR_SPINNER_HTML = '<div class="spinner" style="width: 24px; height: 24px; border: 2px solid rgba(212, 175, 55, 0.15); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 8px 0;"></div>';
+
+  async function renderTafsirExplication() {
+    if (!tafsirCurrentVerse) return;
+    const { sNum, vNumInSurah } = tafsirCurrentVerse;
+    const requestId = ++tafsirRequestId;
+
+    tafsirExp.innerHTML = TAFSIR_SPINNER_HTML;
+
+    if (tafsirSource === 'ar') {
+      try {
+        const surahData = await QuranAPI.fetchIbnKathirSurah(sNum);
+        if (requestId !== tafsirRequestId) return;
+        const arText = surahData[vNumInSurah];
+        if (arText) {
+          tafsirExp.innerHTML = `<div dir="rtl" style="text-align:right; font-family: var(--font-quran); font-size: 1rem; line-height: 1.9; white-space: pre-line;">${arText}</div>`;
+          return;
+        }
+      } catch (error) {
+        console.error('Tafsir Ibn Kathir error:', error);
+      }
+      if (requestId !== tafsirRequestId) return;
+      tafsirExp.textContent = "Aucun commentaire d'Ibn Kathir disponible pour ce verset.";
+      return;
+    }
+
+    // Real per-verse French tafsir (Tafsir Al-Mukhtasar), full Quran coverage.
+    try {
+      const frRanges = await QuranAPI.fetchTafsirFrRanges();
+      if (requestId !== tafsirRequestId) return; // a newer verse/tab was opened meanwhile
+      const frText = QuranAPI.findTafsirText(frRanges, sNum, vNumInSurah);
+      if (frText) {
+        tafsirExp.innerHTML = frText;
+        return;
+      }
+    } catch (error) {
+      console.error('Tafsir FR index error:', error);
+    }
+
+    if (requestId !== tafsirRequestId) return;
+    tafsirExp.textContent = "Aucune explication détaillée n'est disponible pour ce verset pour le moment.";
+  }
+
+  tafsirTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const source = btn.dataset.tafsirSource;
+      if (source === tafsirSource) return;
+      tafsirSource = source;
+      tafsirTabBtns.forEach(b => b.classList.toggle('active', b === btn));
+      renderTafsirExplication();
+    });
+  });
 
   async function openTafsirDrawer(globalNum) {
     if (!state.juzData) return;
@@ -2768,14 +2824,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!targetVerse) return;
 
-    const requestId = ++tafsirRequestId;
     const vNumInSurah = targetVerse.numberInSurah;
     const sNum = targetSurah.number;
+    tafsirCurrentVerse = { sNum, vNumInSurah };
 
     tafsirVerseRef.textContent = `${sNum}:${vNumInSurah}`;
     tafsirTextAr.textContent = targetVerse.textAr;
     tafsirTextFr.textContent = targetVerse.translation;
-    tafsirExp.innerHTML = '<div class="spinner" style="width: 24px; height: 24px; border: 2px solid rgba(212, 175, 55, 0.15); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 8px 0;"></div>';
     tafsirLessonBox.style.display = 'none';
     tafsirNuzulSection.style.display = 'none';
 
@@ -2789,21 +2844,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tafsirNuzulSection.style.display = '';
     }
 
-    // Real per-verse French tafsir (Tafsir Al-Mukhtasar), full Quran coverage.
-    try {
-      const frRanges = await QuranAPI.fetchTafsirFrRanges();
-      if (requestId !== tafsirRequestId) return; // a newer verse was opened meanwhile
-      const frText = QuranAPI.findTafsirText(frRanges, sNum, vNumInSurah);
-      if (frText) {
-        tafsirExp.innerHTML = frText;
-        return;
-      }
-    } catch (error) {
-      console.error('Tafsir FR index error:', error);
-    }
-
-    if (requestId !== tafsirRequestId) return;
-    tafsirExp.textContent = "Aucune explication détaillée n'est disponible pour ce verset pour le moment.";
+    renderTafsirExplication();
   }
 
   function closeTafsirDrawer() {
