@@ -1,7 +1,8 @@
 // IndexedDB Helpers for local persistence
 const DB_NAME = 'WirdQuranDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'juzs';
+const TAFSIR_STORE_NAME = 'tafsir';
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -10,6 +11,9 @@ function openDB() {
       const db = e.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(TAFSIR_STORE_NAME)) {
+        db.createObjectStore(TAFSIR_STORE_NAME, { keyPath: 'id' });
       }
     };
     request.onsuccess = (e) => resolve(e.target.result);
@@ -52,9 +56,96 @@ async function cacheJuz(juzNumber, reciterId, data) {
   }
 }
 
+async function getCachedTafsirIndex(key) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(TAFSIR_STORE_NAME, 'readonly');
+      const store = transaction.objectStore(TAFSIR_STORE_NAME);
+      const request = store.get(key);
+      request.onsuccess = (e) => resolve(e.target.result ? e.target.result.data : null);
+      request.onerror = (e) => reject(e.target.error);
+    });
+  } catch (error) {
+    console.error("IndexedDB read error:", error);
+    return null;
+  }
+}
+
+async function cacheTafsirIndex(key, data) {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(TAFSIR_STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(TAFSIR_STORE_NAME);
+      const request = store.put({ id: key, data: data, timestamp: Date.now() });
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(e.target.error);
+    });
+  } catch (error) {
+    console.error("IndexedDB write error:", error);
+  }
+}
+
 const QuranAPI = {
   // Base URL
   BASE_URL: 'https://api.alquran.cloud/v1',
+
+  // Real per-verse tafsir content (used for the Tafsir drawer), sourced from
+  // Quranpedia (api.quranpedia.net) and bundled locally as static JSON since
+  // that API sends no CORS headers and can't be called directly from the browser.
+  // Each file maps surah -> [[ayahFrom, ayahTo, text], ...] (ranges, since a
+  // single commentary block often covers several consecutive verses).
+  // tafsirFr.json = "Tafsir Al-Mukhtasar" (French) — real text for surahs 1-29
+  // only; the source translation is unfinished beyond that (verified empty).
+  // tafsirAr.json = "Taysir at-Tafsir" by Al-Qattan (Arabic) — covers the
+  // whole Quran, used as an honest, clearly-labeled fallback when no French
+  // text exists for a verse.
+  TAFSIR_FR_URL: './tafsirFr.json',
+  TAFSIR_AR_URL: './tafsirAr.json',
+  TAFSIR_FR_CACHE_KEY: 'mukhtasar_fr_v1',
+  TAFSIR_AR_CACHE_KEY: 'taysir_ar_v1',
+
+  _tafsirFrPromise: null,
+  _tafsirArPromise: null,
+
+  async _loadTafsirRanges(url, cacheKey) {
+    const cached = await getCachedTafsirIndex(cacheKey);
+    if (cached) return cached;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Tafsir fetch failed: ${url}`);
+    const data = await res.json();
+    await cacheTafsirIndex(cacheKey, data);
+    return data;
+  },
+
+  async fetchTafsirFrRanges() {
+    if (!this._tafsirFrPromise) {
+      this._tafsirFrPromise = this._loadTafsirRanges(this.TAFSIR_FR_URL, this.TAFSIR_FR_CACHE_KEY);
+    }
+    return this._tafsirFrPromise;
+  },
+
+  async fetchTafsirArRanges() {
+    if (!this._tafsirArPromise) {
+      this._tafsirArPromise = this._loadTafsirRanges(this.TAFSIR_AR_URL, this.TAFSIR_AR_CACHE_KEY);
+    }
+    return this._tafsirArPromise;
+  },
+
+  /**
+   * Looks up the tafsir text covering a given surah:ayah in a ranges map
+   * returned by fetchTafsirFrRanges/fetchTafsirArRanges. Returns null if the
+   * surah/verse isn't covered.
+   */
+  findTafsirText(ranges, surahNum, ayahNum) {
+    const list = ranges[String(surahNum)];
+    if (!list) return null;
+    for (const [from, to, text] of list) {
+      if (ayahNum >= from && ayahNum <= to) return text;
+    }
+    return null;
+  },
 
   // Curated list of popular reciters
   getReciters() {

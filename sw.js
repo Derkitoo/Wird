@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wird-app-shell-v9';
+const CACHE_NAME = 'wird-app-shell-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,8 @@ const ASSETS = [
   './app.js',
   './api.js',
   './quranData.js',
+  './tafsirFr.json',
+  './tafsirAr.json',
   './icon.jpg',
   './manifest.json'
 ];

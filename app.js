@@ -2727,14 +2727,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const tafsirTextFr = document.getElementById('tafsir-text-fr');
   const tafsirExp = document.getElementById('tafsir-exp');
   const tafsirLesson = document.getElementById('tafsir-lesson');
+  const tafsirLessonBox = document.getElementById('tafsir-lesson-box');
   const tafsirNuzul = document.getElementById('tafsir-nuzul');
+  const tafsirNuzulSection = document.getElementById('tafsir-nuzul-section');
 
-  function openTafsirDrawer(globalNum) {
+  // Real, sourced Asbab an-Nuzul (occasions of revelation). No fabricated
+  // filler: verses/surahs without a genuine entry simply hide the section.
+  const asbabNuzulDict = {
+    "78_1": "Révélé à la Mecque à la suite de l'appel du Prophète (PBSL). Les notables Quraychites commencèrent à se réunir et à contester la réalité de la Résurrection.",
+    "78_2": "Cette grande nouvelle désigne l'annonce du Jour Dernier et le Jugement, dont les Quraychites niaient la véracité physique.",
+    "78_3": "Le doute et la divergence régnaient parmi les mecquois : certains considéraient l'au-delà comme de la poésie, d'autres comme de la sorcellerie.",
+    "78_6": "Révélé suite aux demandes moqueuses des incrédules Quraychites qui réclamaient des preuves matérielles immédiates du pouvoir divin.",
+    "78_17": "Définit le décret final : le Jour du Jugement est un terme déjà fixé par Dieu, dont l'époque exacte est gardée secrète.",
+    "78_31": "Ancré pour encourager les premiers croyants opprimés de la Mecque en leur promettant un salut éclatant et éternel.",
+    "80": "Révélé au sujet d'Abdullah ibn Umm Maktum (compagnon aveugle) venu auprès du Prophète (PBSL) pendant qu'il s'adressait aux notables de Quraych.",
+    "93": "Révélé après une interruption temporaire de la Révélation lorsque les idolâtres raillaient le Prophète en disant 'Son Seigneur l'a abandonné'.",
+    "94": "Proclamé pour réconforter le Prophète (PBSL) et lui promettre que l'aisance accompagnera toujours la difficulté.",
+    "96": "Consacre la toute première Révélation du Coran descendue sur le Prophète (PBSL) dans la grotte de Hira par l'ange Jibril (Gabriel).",
+    "97": "Révélé après la mention d'un homme pieux ayant adoré Dieu 1000 mois; Dieu a offert cette Nuit bénie supérieure à toute une vie d'adoration.",
+    "108": "Révélé en réponse aux moqueries d'Al-As ibn Wa'il qualifiant le Prophète d'Abtar (sans descendance) à la mort de son jeune fils.",
+    "112": "Révélé lorsque les chefs bédouins et notables demandèrent au Prophète : 'Décris-nous la lignée et les caractéristiques de ton Seigneur'.",
+    "113": "Descendu conjointement avec la Sourate An-Nas pour protéger et délivrer le Prophète (PBSL) du sortilège pratiqué par Labid ibn al-A'sam.",
+    "114": "Deuxième sourate protectrice (Al-Mu'awwidhatayn) révélée pour chercher refuge auprès du Maître des hommes contre le chuchoteur furtif."
+  };
+
+  let tafsirRequestId = 0;
+
+  async function openTafsirDrawer(globalNum) {
     if (!state.juzData) return;
 
     let targetVerse = null;
     let targetSurah = null;
-    
+
     for (const surah of state.juzData.surahs) {
       targetVerse = surah.verses.find(v => v.number === globalNum);
       if (targetVerse) {
@@ -2745,57 +2769,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!targetVerse) return;
 
-    const fallbackVerse = window.quranData.verses.find(v => v.number === targetVerse.numberInSurah && targetSurah.number === 78);
-    
-    tafsirVerseRef.textContent = `${targetSurah.number}:${targetVerse.numberInSurah}`;
+    const requestId = ++tafsirRequestId;
+    const vNumInSurah = targetVerse.numberInSurah;
+    const sNum = targetSurah.number;
+
+    tafsirVerseRef.textContent = `${sNum}:${vNumInSurah}`;
     tafsirTextAr.textContent = targetVerse.textAr;
     tafsirTextFr.textContent = targetVerse.translation;
-    
-    // Historical Asbab an-Nuzul mappings for Juz 30 surahs
-    const asbabNuzulDict = {
-      "78_1": "Révélé à la Mecque à la suite de l'appel du Prophète (PBSL). Les notables Quraychites commencèrent à se réunir et à contester la réalité de la Résurrection.",
-      "78_2": "Cette grande nouvelle désigne l'annonce du Jour Dernier et le Jugement, dont les Quraychites niaient la véracité physique.",
-      "78_3": "Le doute et la divergence régnaient parmi les mecquois : certains considéraient l'au-delà comme de la poésie, d'autres comme de la sorcellerie.",
-      "78_6": "Révélé suite aux demandes moqueuses des incrédules Quraychites qui réclamaient des preuves matérielles immédiates du pouvoir divin.",
-      "78_17": "Définit le décret final : le Jour du Jugement est un terme déjà fixé par Dieu, dont l'époque exacte est gardée secrète.",
-      "78_31": "Ancré pour encourager les premiers croyants opprimés de la Mecque en leur promettant un salut éclatant et éternel.",
-      "80": "Révélé au sujet d'Abdullah ibn Umm Maktum (compagnon aveugle) venu auprès du Prophète (PBSL) pendant qu'il s'adressait aux notables de Quraych.",
-      "93": "Révélé après une interruption temporaire de la Révélation lorsque les idolâtres raillaient le Prophète en disant 'Son Seigneur l'a abandonné'.",
-      "94": "Proclamé pour réconforter le Prophète (PBSL) et lui promettre que l'aisance accompagnera toujours la difficulté.",
-      "96": "Consacre la toute première Révélation du Coran descendue sur le Prophète (PBSL) dans la grotte de Hira par l'ange Jibril (Gabriel).",
-      "97": "Révélé après la mention d'un homme pieux ayant adoré Dieu 1000 mois; Dieu a offert cette Nuit bénie supérieure à toute une vie d'adoration.",
-      "108": "Révélé en réponse aux moqueries d'Al-As ibn Wa'il qualifiant le Prophète d'Abtar (sans descendance) à la mort de son jeune fils.",
-      "112": "Révélé lorsque les chefs bédouins et notables demandèrent au Prophète : 'Décris-nous la lignée et les caractéristiques de ton Seigneur'.",
-      "113": "Descendu conjointement avec la Sourate An-Nas pour protéger et délivrer le Prophète (PBSL) du sortilège pratiqué par Labid ibn al-A'sam.",
-      "114": "Deuxième sourate protectrice (Al-Mu'awwidhatayn) révélée pour chercher refuge auprès du Maître des hommes contre le chuchoteur furtif."
-    };
-
-    let vNumInSurah = targetVerse.numberInSurah;
-    let sNum = targetSurah.number;
-    
-    const specificKey = `${sNum}_${vNumInSurah}`;
-    const surahKey = `${sNum}`;
-    
-    if (tafsirNuzul) {
-      if (asbabNuzulDict[specificKey]) {
-        tafsirNuzul.textContent = asbabNuzulDict[specificKey];
-      } else if (asbabNuzulDict[surahKey]) {
-        tafsirNuzul.textContent = asbabNuzulDict[surahKey];
-      } else {
-        tafsirNuzul.textContent = `Verset révélé à la Mecque pour consolider la certitude des croyants et renouveler la foi à travers l'observation des signes de la création divine (Sourate ${targetSurah.nameFr}).`;
-      }
-    }
-
-    if (fallbackVerse) {
-      tafsirExp.textContent = fallbackVerse.tafsir;
-      tafsirLesson.textContent = fallbackVerse.keyLesson;
-    } else {
-      tafsirExp.textContent = `Ce verset fait partie de la Sourate ${targetSurah.nameFr} (Juz ${state.selectedJuz}). Il témoigne de la grandeur et des signes de la création divine et rappelle notre retour vers le Créateur.`;
-      tafsirLesson.textContent = `Méditer sur les leçons de la Sourate ${targetSurah.nameFr} et renouveler notre intention d'application pratique.`;
-    }
+    tafsirExp.textContent = 'Chargement…';
+    tafsirLessonBox.style.display = 'none';
+    tafsirNuzulSection.style.display = 'none';
 
     tafsirDrawer.classList.add('open');
     drawerOverlay.classList.add('active');
+
+    // Asbab an-Nuzul: only ever show a real, sourced entry.
+    const asbabText = asbabNuzulDict[`${sNum}_${vNumInSurah}`] || asbabNuzulDict[`${sNum}`] || null;
+    if (asbabText) {
+      tafsirNuzul.textContent = asbabText;
+      tafsirNuzulSection.style.display = '';
+    }
+
+    // Curated, hand-verified explanation + spiritual lesson (Surah 78 only).
+    const curatedVerse = sNum === 78
+      ? window.quranData.verses.find(v => v.number === vNumInSurah)
+      : null;
+
+    if (curatedVerse) {
+      tafsirExp.textContent = curatedVerse.tafsir;
+      tafsirLesson.textContent = curatedVerse.keyLesson;
+      tafsirLessonBox.style.display = '';
+      return;
+    }
+
+    // Real per-verse French tafsir (Tafsir Al-Mukhtasar).
+    try {
+      const frRanges = await QuranAPI.fetchTafsirFrRanges();
+      if (requestId !== tafsirRequestId) return; // a newer verse was opened meanwhile
+      const frText = QuranAPI.findTafsirText(frRanges, sNum, vNumInSurah);
+      if (frText) {
+        tafsirExp.innerHTML = frText;
+        return;
+      }
+    } catch (error) {
+      console.error('Tafsir FR index error:', error);
+    }
+
+    if (requestId !== tafsirRequestId) return;
+
+    // Honest fallback: real Arabic tafsir (Taysir at-Tafsir, full Quran
+    // coverage), clearly labeled — no French translation exists for it yet.
+    try {
+      const arRanges = await QuranAPI.fetchTafsirArRanges();
+      if (requestId !== tafsirRequestId) return;
+      const arText = QuranAPI.findTafsirText(arRanges, sNum, vNumInSurah);
+      if (arText) {
+        tafsirExp.innerHTML = `<span style="direction:rtl; text-align:right; display:block; font-family:var(--font-quran); font-size:1rem; line-height:1.8;">${arText}</span><br><em style="font-size:0.7rem; opacity:0.65;">Tafsir en arabe (traduction française indisponible pour ce verset).</em>`;
+        return;
+      }
+    } catch (error) {
+      console.error('Tafsir AR fallback error:', error);
+    }
+
+    if (requestId !== tafsirRequestId) return;
+    tafsirExp.textContent = "Aucune explication détaillée n'est disponible pour ce verset pour le moment.";
   }
 
   function closeTafsirDrawer() {
