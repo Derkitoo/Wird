@@ -1015,9 +1015,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const bottomNav = document.querySelector('.bottom-nav');
     const pagination = document.getElementById('reader-page-pagination');
     const pageRect = pageEl.getBoundingClientRect();
-    const navHeight = bottomNav ? bottomNav.getBoundingClientRect().height : 0;
+    // Measured to the nav's own top edge (not just its height) so this stays
+    // correct regardless of how it's positioned — e.g. the floating pill nav
+    // sits above the viewport bottom with its own margin/safe-area offset,
+    // which a plain height subtraction wouldn't account for.
+    const navTop = bottomNav ? bottomNav.getBoundingClientRect().top : window.innerHeight;
     const paginationHeight = pagination ? pagination.getBoundingClientRect().height : 0;
-    const available = window.innerHeight - pageRect.top - paginationHeight - navHeight - 24;
+    const available = navTop - pageRect.top - paginationHeight - 16;
     if (available <= 0) return;
 
     const applySize = (size) => {
