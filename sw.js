@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wird-app-shell-v6';
+const CACHE_NAME = 'wird-app-shell-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -60,10 +60,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle local app shell files - Network First strategy
+  // Handle local app shell files - Network First strategy. cache: 'no-store'
+  // makes this an actual network-first fetch — without it, the browser's own
+  // HTTP cache can quietly serve a heuristically-cached response here even
+  // though the strategy is meant to always prefer fresh network content,
+  // defeating the point of bumping CACHE_NAME on deploy.
   if (url.startsWith(self.location.origin)) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();

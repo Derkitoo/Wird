@@ -903,8 +903,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load dynamic Juz data (for Reader view)
   async function loadJuzData() {
     if (!quranContainer || !readerLoader) return;
-    
-    quranContainer.style.display = 'none';
+
+    // Only the spinner toggles here — #quran-page (quranContainer) itself is
+    // left alone rather than hidden via display:none while loading: it's
+    // empty until renderQuranText() fills it a few lines down, and hiding it
+    // would make that fill happen inside a display:none box, where
+    // scrollHeight always reads 0 and fitReaderPageToViewport() can't
+    // measure real content height.
     readerLoader.style.display = 'flex';
 
     readerSurahTitle.textContent = `Juz ${state.selectedJuz}`;
@@ -913,7 +918,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const data = await window.QuranAPI.fetchJuz(state.selectedJuz, state.selectedReciter);
       state.juzData = data;
-      
+
       const surahsListed = data.surahs.map(s => s.nameFr).join(' / ');
       readerSurahTitle.textContent = surahsListed.length > 25 ? `${data.surahs[0].nameFr}...` : surahsListed;
       readerJuzTitle.textContent = `Juz ${state.selectedJuz} • ${data.surahs.length} Sourates`;
@@ -926,7 +931,6 @@ document.addEventListener('DOMContentLoaded', () => {
       loadFallbackData();
     } finally {
       readerLoader.style.display = 'none';
-      quranContainer.style.display = 'flex';
     }
   }
 
@@ -958,6 +962,74 @@ document.addEventListener('DOMContentLoaded', () => {
   // doesn't always match a literal string here byte-for-byte — without this,
   // startsWith() below silently fails even though the text is identical.
   const BISMILLAH_AR = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'.normalize('NFC');
+
+  // Shrinks the current Lecture-mode page's Arabic flow (if needed) so the
+  // whole page fits without scrolling, instead of forcing one fixed size
+  // that's sometimes too tall for a dense page. Safe to do per-page (unlike
+  // the old StPageFlip book) since exactly one page is ever in the DOM at a
+  // time here — no "uniform size across every page" balancing needed, no
+  // async library lifecycle to race. Only touches inline font-size on the
+  // flow elements, never state.arabicFontSize, so the A-/A+ controls keep
+  // reflecting the user's actual preference rather than a shrunk value.
+  function fitReaderPageToViewport() {
+    if (state.readerMode !== 'read') return;
+    const pageEl = document.getElementById('quran-page');
+    if (!pageEl) return;
+    const flowEls = pageEl.querySelectorAll('.mushaf-flow');
+    if (flowEls.length === 0) return;
+
+    const bottomNav = document.querySelector('.bottom-nav');
+    const pagination = document.getElementById('reader-page-pagination');
+    const pageRect = pageEl.getBoundingClientRect();
+    const navHeight = bottomNav ? bottomNav.getBoundingClientRect().height : 0;
+    const paginationHeight = pagination ? pagination.getBoundingClientRect().height : 0;
+    const available = window.innerHeight - pageRect.top - paginationHeight - navHeight - 24;
+    if (available <= 0) return;
+
+    const applySize = (size) => {
+      flowEls.forEach(el => { el.style.fontSize = `${size}px`; });
+      // Set explicitly on each verse span too rather than relying on it
+      // inheriting from .mushaf-flow: the ayah-marker's own em-based
+      // dimensions are relative to its direct parent (.mushaf-verse), so if
+      // that inheritance is ever a font behind (e.g. mid-reflow), the marker
+      // stays a fixed, too-large size that alone forces the line height,
+      // silently defeating the whole point of shrinking the surrounding text.
+      pageEl.querySelectorAll('.mushaf-verse').forEach(el => { el.style.fontSize = `${size}px`; });
+      pageEl.querySelectorAll('.mushaf-bismillah').forEach(el => { el.style.fontSize = `${Math.round(size * 0.85)}px`; });
+    };
+
+    const MIN_FONT = 12;
+    const maxFont = state.arabicFontSize;
+
+    applySize(maxFont);
+    if (pageEl.scrollHeight <= available) return; // already fits at the user's chosen size
+
+    // Text reflow isn't linear with font-size (word-wrap boundaries shift in
+    // jumps), so a single proportional estimate tends to either overshoot or
+    // undershoot badly. Binary search instead: it always converges on the
+    // largest size that actually fits, in ~5 reflows regardless.
+    let lo = MIN_FONT;
+    let hi = maxFont;
+    let best = MIN_FONT;
+    applySize(MIN_FONT);
+    if (pageEl.scrollHeight > available) {
+      // Doesn't fit even at the floor — leave it at the floor rather than
+      // going smaller and risking illegible text; the page will scroll
+      // slightly instead of losing content.
+      return;
+    }
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      applySize(mid);
+      if (pageEl.scrollHeight <= available) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    applySize(best);
+  }
 
   // Render text for Page-by-Page Reader View — renders only the current
   // page's content into #quran-page; navigation just moves
@@ -1177,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePagePaginationUI();
     refreshDisplayLanguages();
     schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
+    fitReaderPageToViewport();
 
     // Play the slide-in transition matching the navigation direction, if any
     pageEl.classList.remove('page-slide-next', 'page-slide-prev');
@@ -2900,6 +2973,20 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error("[System] No navigation items found with class .nav-item!");
   }
   
+  // Re-fit the current Lecture-mode page when the viewport or the app's
+  // responsive text-scale changes (rotation, resizing, unfolding mid-read).
+  let fitResizeTimeout = null;
+  function scheduleReaderRefit() {
+    if (state.currentView !== 'reader' || state.readerMode !== 'read') return;
+    if (fitResizeTimeout) clearTimeout(fitResizeTimeout);
+    fitResizeTimeout = setTimeout(() => {
+      fitResizeTimeout = null;
+      renderQuranText(true);
+    }, 200);
+  }
+  window.addEventListener('resize', scheduleReaderRefit);
+  window.addEventListener('wird:scalechange', scheduleReaderRefit);
+
   // Default launch
   switchView('dashboard');
   checkInitialReadingPosition();

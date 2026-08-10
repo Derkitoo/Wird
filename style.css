@@ -606,22 +606,23 @@ main::-webkit-scrollbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .surah-info-title {
   text-align: center;
   flex: 1;
+  line-height: 1.15;
 }
 
 .surah-info-title h2 {
-  font-size: 1.25rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-strong);
 }
 
 .surah-info-title p {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   color: var(--text-secondary);
 }
 
@@ -630,16 +631,16 @@ main::-webkit-scrollbar {
   background: rgba(10, 14, 26, 0.5);
   border: 1px solid var(--border-card);
   border-radius: 30px;
-  padding: 3px;
+  padding: 2px;
 }
 
 .switch-btn {
   background: none;
   border: none;
   color: var(--text-secondary);
-  padding: 6px 12px;
+  padding: 4px 9px;
   border-radius: 20px;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition-smooth);
@@ -670,11 +671,11 @@ main::-webkit-scrollbar {
   border: 2px double var(--reading-border);
   border-radius: var(--radius-md);
   box-shadow: var(--reading-shadow);
-  padding: 18px 20px 24px;
+  padding: 10px 12px 12px;
   position: relative;
   box-sizing: border-box;
   color: var(--reading-text);
-  min-height: 320px;
+  min-height: 240px;
 }
 
 .quran-page-sheet::before {
@@ -1269,17 +1270,17 @@ main::-webkit-scrollbar {
 /* Responsive Font size controls in top control bar */
 .text-size-controls {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .btn-text-size {
-  width: 28px;
-  height: 28px;
+  width: 23px;
+  height: 23px;
   background: color-mix(in srgb, var(--text-strong) 5%, transparent);
   border: 1px solid color-mix(in srgb, var(--text-strong) 8%, transparent);
   border-radius: 50%;
   color: var(--text-primary);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   cursor: pointer;
   display: flex;
   justify-content: center;
@@ -1568,12 +1569,12 @@ main::-webkit-scrollbar {
 .hifz-mini-stats {
   display: flex;
   gap: 10px;
-  padding-bottom: 8px;
+  padding-bottom: 5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .hifz-mini-stat {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
   color: var(--text-strong);
 }

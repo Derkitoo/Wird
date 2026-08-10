@@ -422,62 +422,63 @@
         <!-- Display Toggles (Translation & Phonetics) — only meaningful in
              Mémoriser mode; Lecture mode's dense Mushaf page doesn't show
              inline translation/phonetic text for these to control. -->
-        <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 10px 0; padding: 8px 14px; justify-content: space-around; font-size: 0.6875rem; gap:8px;">
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+        <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 4px 0; padding: 5px 12px; justify-content: space-around; font-size: 0.625rem; gap:8px;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
             <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
           </label>
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
             <input type="checkbox" id="toggle-show-fr" checked style="accent-color: var(--primary);"> Traduction (FR)
           </label>
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
+          <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
             <input type="checkbox" id="toggle-show-trans" checked style="accent-color: var(--primary);"> Phonétique
           </label>
         </div>
 
         <!-- Dropdowns for Juz and Reciter selections -->
-        <div class="reader-selectors-bar" style="display: flex; gap: 8px; margin-bottom: 8px;">
-          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 6px 10px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
+        <div class="reader-selectors-bar" style="display: flex; gap: 6px; margin-bottom: 4px;">
+          <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
-          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 6px 10px; border-radius: var(--radius-md); font-family: var(--font-ui); font-size: 0.8125rem; outline: none; cursor: pointer;">
+          <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
             <!-- Populated via JS -->
           </select>
         </div>
 
         <!-- Audio Offline Cache Manager -->
-        <div class="glass-card" style="margin-bottom: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-          <div style="display:flex; flex-direction:column; gap:2px;">
-            <span id="audio-download-status" style="font-size: 0.6875rem; color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
-            <span id="audio-download-detail" style="font-size: 0.5625rem; color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
-          </div>
-          <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; font-size: 0.6875rem; border-radius:var(--radius-md); font-weight:700; width:auto; justify-content:center;">
+        <div class="glass-card" style="margin-bottom: 4px; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <span style="font-size: 0.625rem; color: var(--text-secondary); line-height: 1.3;">
+            <span id="audio-download-status" style="color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
+            <span style="color: var(--text-muted);"> · </span>
+            <span id="audio-download-detail" style="color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
+          </span>
+          <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; font-size: 0.625rem; border-radius:var(--radius-sm); font-weight:700; width:auto; justify-content:center; flex-shrink:0;">
             📥 Télécharger
           </button>
         </div>
         <!-- Progress bar for audio download -->
-        <div id="audio-download-progress-container" style="display: none; width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 14px; overflow:hidden;">
+        <div id="audio-download-progress-container" style="display: none; width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 6px; overflow:hidden;">
           <div id="audio-download-progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;"></div>
         </div>
 
         <!-- Memorization (Hifz) Assistance toolbar -->
-        <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 12px; border-radius: var(--radius-lg);">
+        <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 6px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 8px 10px; border-radius: var(--radius-md);">
           <div class="hifz-mini-stats">
             <span class="hifz-mini-stat">🔥 <span class="hifz-streak-value">0</span> j</span>
             <span class="hifz-mini-stat">⭐ Niv. <span class="hifz-level-value">1</span></span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-            <span style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
+            <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
             <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
-              <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">🎯 Auto</button>
-              <button class="switch-btn" data-hifz-level="1" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Complet</button>
-              <button class="switch-btn" data-hifz-level="2" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">1er Mot</button>
-              <button class="switch-btn" data-hifz-level="3" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Troué</button>
-              <button class="switch-btn" data-hifz-level="4" style="padding: 4px 8px; font-size: 0.625rem; border-radius:12px;">Masqué</button>
+              <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">🎯 Auto</button>
+              <button class="switch-btn" data-hifz-level="1" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Complet</button>
+              <button class="switch-btn" data-hifz-level="2" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">1er Mot</button>
+              <button class="switch-btn" data-hifz-level="3" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Troué</button>
+              <button class="switch-btn" data-hifz-level="4" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Masqué</button>
             </div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; margin-top: 4px;">
-            <span style="font-size: 0.6875rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
-            <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.6875rem; outline: none; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
+            <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
+            <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 3px 6px; border-radius: var(--radius-sm); font-size: 0.625rem; outline: none; cursor: pointer;">
               <option value="1">1x (Normal)</option>
               <option value="3">3x en boucle</option>
               <option value="5">5x en boucle</option>
@@ -500,7 +501,7 @@
         </div>
 
         <!-- Page Pagination controls -->
-        <div id="reader-page-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding:12px 0; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
+        <div id="reader-page-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:6px 0; border-top: 1px solid rgba(255,255,255,0.05); margin-bottom:4px;">
           <button id="btn-next-page" class="btn-action-small" style="width:auto; padding:8px 14px; justify-content:center; cursor:pointer;">◀ Suivant</button>
           <span id="label-reader-page" style="font-size: 0.75rem; font-weight:700; color:var(--primary);">Page 1/20 (Page 582)</span>
           <button id="btn-prev-page" class="btn-action-small" style="width:auto; padding:8px 14px; justify-content:center; cursor:pointer;">Précédent ▶</button>
