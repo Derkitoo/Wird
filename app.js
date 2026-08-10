@@ -2726,7 +2726,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const tafsirTextAr = document.getElementById('tafsir-text-ar');
   const tafsirTextFr = document.getElementById('tafsir-text-fr');
   const tafsirExp = document.getElementById('tafsir-exp');
-  const tafsirLesson = document.getElementById('tafsir-lesson');
   const tafsirLessonBox = document.getElementById('tafsir-lesson-box');
   const tafsirNuzul = document.getElementById('tafsir-nuzul');
   const tafsirNuzulSection = document.getElementById('tafsir-nuzul-section');
@@ -2776,7 +2775,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tafsirVerseRef.textContent = `${sNum}:${vNumInSurah}`;
     tafsirTextAr.textContent = targetVerse.textAr;
     tafsirTextFr.textContent = targetVerse.translation;
-    tafsirExp.textContent = 'Chargement…';
+    tafsirExp.innerHTML = '<div class="spinner" style="width: 24px; height: 24px; border: 2px solid rgba(212, 175, 55, 0.15); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 8px 0;"></div>';
     tafsirLessonBox.style.display = 'none';
     tafsirNuzulSection.style.display = 'none';
 
@@ -2790,19 +2789,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tafsirNuzulSection.style.display = '';
     }
 
-    // Curated, hand-verified explanation + spiritual lesson (Surah 78 only).
-    const curatedVerse = sNum === 78
-      ? window.quranData.verses.find(v => v.number === vNumInSurah)
-      : null;
-
-    if (curatedVerse) {
-      tafsirExp.textContent = curatedVerse.tafsir;
-      tafsirLesson.textContent = curatedVerse.keyLesson;
-      tafsirLessonBox.style.display = '';
-      return;
-    }
-
-    // Real per-verse French tafsir (Tafsir Al-Mukhtasar).
+    // Real per-verse French tafsir (Tafsir Al-Mukhtasar), full Quran coverage.
     try {
       const frRanges = await QuranAPI.fetchTafsirFrRanges();
       if (requestId !== tafsirRequestId) return; // a newer verse was opened meanwhile
@@ -2813,22 +2800,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       console.error('Tafsir FR index error:', error);
-    }
-
-    if (requestId !== tafsirRequestId) return;
-
-    // Honest fallback: real Arabic tafsir (Taysir at-Tafsir, full Quran
-    // coverage), clearly labeled — no French translation exists for it yet.
-    try {
-      const arRanges = await QuranAPI.fetchTafsirArRanges();
-      if (requestId !== tafsirRequestId) return;
-      const arText = QuranAPI.findTafsirText(arRanges, sNum, vNumInSurah);
-      if (arText) {
-        tafsirExp.innerHTML = `<span style="direction:rtl; text-align:right; display:block; font-family:var(--font-quran); font-size:1rem; line-height:1.8;">${arText}</span><br><em style="font-size:0.7rem; opacity:0.65;">Tafsir en arabe (traduction française indisponible pour ce verset).</em>`;
-        return;
-      }
-    } catch (error) {
-      console.error('Tafsir AR fallback error:', error);
     }
 
     if (requestId !== tafsirRequestId) return;

@@ -91,23 +91,18 @@ const QuranAPI = {
   // Base URL
   BASE_URL: 'https://api.alquran.cloud/v1',
 
-  // Real per-verse tafsir content (used for the Tafsir drawer), sourced from
-  // Quranpedia (api.quranpedia.net) and bundled locally as static JSON since
-  // that API sends no CORS headers and can't be called directly from the browser.
-  // Each file maps surah -> [[ayahFrom, ayahTo, text], ...] (ranges, since a
-  // single commentary block often covers several consecutive verses).
-  // tafsirFr.json = "Tafsir Al-Mukhtasar" (French) — real text for surahs 1-29
-  // only; the source translation is unfinished beyond that (verified empty).
-  // tafsirAr.json = "Taysir at-Tafsir" by Al-Qattan (Arabic) — covers the
-  // whole Quran, used as an honest, clearly-labeled fallback when no French
-  // text exists for a verse.
+  // Real per-verse tafsir content (used for the Tafsir drawer): "Tafsir
+  // Al-Mukhtasar" (Tafsir Center for Quranic Studies), French, full Quran
+  // coverage (verified: all 6236 verses, sourced from quranenc.com's API).
+  // Bundled locally as static JSON because quranenc.com's translation API,
+  // while CORS-enabled, has no bulk endpoint (114 requests to build it) —
+  // fetching it live on every drawer open would be wasteful and slow.
+  // Maps surah -> [[ayahFrom, ayahTo, text], ...] (ranges, since consecutive
+  // verses sharing identical text are merged to shrink the file).
   TAFSIR_FR_URL: './tafsirFr.json',
-  TAFSIR_AR_URL: './tafsirAr.json',
-  TAFSIR_FR_CACHE_KEY: 'mukhtasar_fr_v1',
-  TAFSIR_AR_CACHE_KEY: 'taysir_ar_v1',
+  TAFSIR_FR_CACHE_KEY: 'mukhtasar_fr_v2',
 
   _tafsirFrPromise: null,
-  _tafsirArPromise: null,
 
   async _loadTafsirRanges(url, cacheKey) {
     const cached = await getCachedTafsirIndex(cacheKey);
@@ -124,13 +119,6 @@ const QuranAPI = {
       this._tafsirFrPromise = this._loadTafsirRanges(this.TAFSIR_FR_URL, this.TAFSIR_FR_CACHE_KEY);
     }
     return this._tafsirFrPromise;
-  },
-
-  async fetchTafsirArRanges() {
-    if (!this._tafsirArPromise) {
-      this._tafsirArPromise = this._loadTafsirRanges(this.TAFSIR_AR_URL, this.TAFSIR_AR_CACHE_KEY);
-    }
-    return this._tafsirArPromise;
   },
 
   /**
