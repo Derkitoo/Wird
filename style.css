@@ -962,17 +962,26 @@ main::-webkit-scrollbar {
   transform: translateY(0);
 }
 
+/* .tafsir-header/.tafsir-content are shared by every bottom-sheet drawer
+   (tafsir, Hifz flashcard, settings) — all of them keep a fixed dark
+   background (#0D1222 below) regardless of the active theme. Using the
+   theme-variable text colors here was a real bug: --text-strong/
+   --text-secondary flip to near-black in the light/sepia themes (meant for
+   THEIR light page backgrounds elsewhere in the app), which made every
+   drawer render dark text on this drawer's always-dark background —
+   invisible. These use fixed light values instead, matching the fixed dark
+   background they actually sit on. */
 .tafsir-header {
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid color-mix(in srgb, var(--text-strong) 5%, transparent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .tafsir-header h3 {
   font-size: 1.125rem;
-  color: var(--text-strong);
+  color: #FFF;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -989,7 +998,7 @@ main::-webkit-scrollbar {
 .btn-close-drawer {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 1.5rem;
   cursor: pointer;
   line-height: 1;
@@ -1000,7 +1009,7 @@ main::-webkit-scrollbar {
   padding: 20px;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .tafsir-content h4 {
@@ -1021,7 +1030,7 @@ main::-webkit-scrollbar {
   border-radius: var(--radius-md);
   padding: 12px;
   margin-top: 16px;
-  color: var(--text-primary);
+  color: #FFF;
 }
 
 .lesson-box strong {

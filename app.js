@@ -2072,7 +2072,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (hifzFallbackRow) hifzFallbackRow.style.display = 'none';
     hifzCardMicBtn.className = '';
     hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
-    hifzCardRecordingStatus.style.color = 'var(--text-secondary)';
+    hifzCardRecordingStatus.style.color = 'rgba(255,255,255,0.75)';
 
     if (hifzFlashcardModal && drawerOverlay) {
       hifzFlashcardModal.classList.add('open');
@@ -2138,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function cancelHifzSpeechRecording() {
     hifzCardMicBtn.className = '';
     hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
-    hifzCardRecordingStatus.style.color = 'var(--text-secondary)';
+    hifzCardRecordingStatus.style.color = 'rgba(255,255,255,0.75)';
 
     if (state.hifzSpeechRecognition) {
       state.hifzSpeechRecognition.onend = null;
