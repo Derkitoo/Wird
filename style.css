@@ -472,6 +472,43 @@ main::-webkit-scrollbar {
   transform: scale(0.92);
 }
 
+/* Dashboard "Voir plus" — reveals the secondary/supplementary cards
+   (daily verse, page planner, garden, attendance heatmap) below the
+   essential progress + prayer-checklist, which stay visible by default. */
+.btn-dashboard-secondary-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 10px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-dashboard-secondary-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.btn-dashboard-secondary-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  transition: transform 0.25s ease;
+}
+
+.btn-dashboard-secondary-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
 /* Interactive Garden container */
 .garden-container {
   height: 160px;

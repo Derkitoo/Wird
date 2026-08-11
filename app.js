@@ -188,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const drawerOverlay = document.getElementById('drawer-overlay');
 
   // New features DOM Elements
+  const btnToggleDashboardSecondary = document.getElementById('btn-toggle-dashboard-secondary');
+  const dashboardSecondarySection = document.getElementById('dashboard-secondary-section');
   const btnToggleWirdPlanner = document.getElementById('btn-toggle-wird-planner');
   const wirdPlannerPanel = document.getElementById('wird-planner-panel');
   const wirdTotalPagesLabel = document.getElementById('wird-total-pages-label');
@@ -456,6 +458,15 @@ document.addEventListener('DOMContentLoaded', () => {
       drawerOverlay.addEventListener('click', () => {
         closeHifzFlashcard();
         closeTafsirDrawer();
+      });
+    }
+
+    if (btnToggleDashboardSecondary && dashboardSecondarySection) {
+      btnToggleDashboardSecondary.addEventListener('click', () => {
+        const isOpen = dashboardSecondarySection.style.display !== 'none';
+        dashboardSecondarySection.style.display = isOpen ? 'none' : 'block';
+        btnToggleDashboardSecondary.setAttribute('aria-expanded', String(!isOpen));
+        btnToggleDashboardSecondary.querySelector('span').textContent = isOpen ? 'Voir plus' : 'Voir moins';
       });
     }
 

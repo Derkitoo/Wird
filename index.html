@@ -192,24 +192,6 @@
           </button>
         </div>
 
-        <!-- Verset Clé du Jour -->
-        <div class="glass-card ayah-day-card" style="margin-top: 16px; margin-bottom: 8px;">
-          <div class="ayah-day-header">
-            <span class="ayah-day-label">Verset Clé du Jour</span>
-            <span class="ayah-day-reference">Sourate An-Naba, v.9</span>
-          </div>
-          <div class="ayah-arabic">
-            وَجَعَلْنَا نَوْمَكُمْ سُبَاتًا
-          </div>
-          <div class="ayah-translation">
-            "Et Nous avons désigné votre sommeil pour votre repos,"
-          </div>
-          <button id="btn-meditate-key" class="btn-primary">
-            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-            Méditer & Comprendre le Tafsir
-          </button>
-        </div>
-
         <!-- Revisions Due today (SRS) -->
         <div id="srs-revisions-card" class="glass-card" style="display: none; border-left: 3px solid var(--ruby); background: rgba(239, 68, 68, 0.04); margin-top: 16px; margin-bottom: 20px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
@@ -270,131 +252,160 @@
           </div>
         </div>
 
-        <!-- Toggler for Wird Configurer -->
-        <div style="margin-bottom: 24px; display: flex; justify-content: flex-end; padding-right: 4px; margin-top: -6px;">
-          <button id="btn-toggle-wird-planner" style="background: none; border: none; color: var(--primary); font-size: 0.6875rem; font-weight:700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding:0; outline:none;">
-            ⚙️ Personnaliser les pages par prière
-          </button>
-        </div>
+        <!-- "Voir plus" toggle: everything below is supplementary (daily
+             verse, page planner, garden visualizer, attendance heatmap) —
+             collapsed by default so the essential (progress + prayers) is
+             what actually greets the user. -->
+        <button id="btn-toggle-dashboard-secondary" class="btn-dashboard-secondary-toggle" aria-expanded="false">
+          <span>Voir plus</span>
+          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
 
-        <!-- Collapsible planner panel -->
-        <div id="wird-planner-panel" class="glass-card" style="display: none; margin-bottom: 20px; padding: 16px; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease-out;">
-          <h4 style="font-size: 0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; margin: 0;">Répartition des pages</h4>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-size: 0.6875rem; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
-              <span>Pages à lire par prière :</span>
-              <span id="wird-total-pages-label" style="font-weight:700; color:var(--primary);">Total : 20 pages</span>
+        <div id="dashboard-secondary-section" style="display:none;">
+          <!-- Verset Clé du Jour -->
+          <div class="glass-card ayah-day-card" style="margin-top: 16px; margin-bottom: 16px;">
+            <div class="ayah-day-header">
+              <span class="ayah-day-label">Verset Clé du Jour</span>
+              <span class="ayah-day-reference">Sourate An-Naba, v.9</span>
             </div>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Fajr :</span>
-              <input type="range" id="slider-fajr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-fajr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+            <div class="ayah-arabic">
+              وَجَعَلْنَا نَوْمَكُمْ سُبَاتًا
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Dhuhr :</span>
-              <input type="range" id="slider-dhuhr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-dhuhr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+            <div class="ayah-translation">
+              "Et Nous avons désigné votre sommeil pour votre repos,"
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Asr :</span>
-              <input type="range" id="slider-asr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-asr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Maghrib :</span>
-              <input type="range" id="slider-maghrib" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-maghrib" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-              <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Isha :</span>
-              <input type="range" id="slider-isha" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
-              <span id="label-slider-isha" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+            <button id="btn-meditate-key" class="btn-primary">
+              <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+              Méditer & Comprendre le Tafsir
+            </button>
+          </div>
+
+          <!-- Toggler for Wird Configurer -->
+          <div style="margin-bottom: 24px; display: flex; justify-content: flex-end; padding-right: 4px;">
+            <button id="btn-toggle-wird-planner" style="background: none; border: none; color: var(--primary); font-size: 0.6875rem; font-weight:700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding:0; outline:none;">
+              ⚙️ Personnaliser les pages par prière
+            </button>
+          </div>
+
+          <!-- Collapsible planner panel -->
+          <div id="wird-planner-panel" class="glass-card" style="display: none; margin-bottom: 20px; padding: 16px; flex-direction: column; gap: 12px; animation: fadeIn 0.3s ease-out;">
+            <h4 style="font-size: 0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase; margin: 0;">Répartition des pages</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 0.6875rem; color: var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                <span>Pages à lire par prière :</span>
+                <span id="wird-total-pages-label" style="font-weight:700; color:var(--primary);">Total : 20 pages</span>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Fajr :</span>
+                <input type="range" id="slider-fajr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
+                <span id="label-slider-fajr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Dhuhr :</span>
+                <input type="range" id="slider-dhuhr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
+                <span id="label-slider-dhuhr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Asr :</span>
+                <input type="range" id="slider-asr" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
+                <span id="label-slider-asr" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Maghrib :</span>
+                <input type="range" id="slider-maghrib" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
+                <span id="label-slider-maghrib" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size: 0.6875rem; width:65px; color:#FFF;">Isha :</span>
+                <input type="range" id="slider-isha" min="0" max="10" value="4" style="flex:1; cursor:pointer;">
+                <span id="label-slider-isha" style="font-size: 0.6875rem; width:25px; text-align:right; font-weight:600; color:var(--primary);">4p</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- The Interactive Garden Visualizer -->
-        <div class="garden-container" style="margin-bottom: 24px;">
-          <div class="garden-title">
-            <svg style="width:16px;height:16px;fill:var(--primary)" viewBox="0 0 24 24">
-              <path d="M12 3C6.5 3 2 6.5 2 12c0 3.58 2.5 6.58 6 7.5v-2.13C5.83 16.5 4 14.48 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 2.48-1.83 4.5-4 5.37v2.13c3.5-.92 6-3.92 6-7.5 0-5.5-4.5-9-10-9z"/>
+          <!-- The Interactive Garden Visualizer -->
+          <div class="garden-container" style="margin-bottom: 24px;">
+            <div class="garden-title">
+              <svg style="width:16px;height:16px;fill:var(--primary)" viewBox="0 0 24 24">
+                <path d="M12 3C6.5 3 2 6.5 2 12c0 3.58 2.5 6.58 6 7.5v-2.13C5.83 16.5 4 14.48 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8c0 2.48-1.83 4.5-4 5.37v2.13c3.5-.92 6-3.92 6-7.5 0-5.5-4.5-9-10-9z"/>
+              </svg>
+              Votre Jardin de Lecture
+            </div>
+
+            <svg class="garden-svg" viewBox="0 0 400 160">
+              <line x1="50" y1="145" x2="350" y2="145" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+              <path d="M180 145 C 190 140, 210 140, 220 145" fill="none" stroke="rgba(212, 175, 55, 0.2)" stroke-width="2"/>
+
+              <path id="garden-branch-1" class="garden-branch" d="M 200 145 Q 150 135 100 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
+              <path id="garden-branch-2" class="garden-branch" d="M 200 145 Q 160 90 150 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
+              <path id="garden-branch-3" class="garden-branch" d="M 200 145 Q 200 80 200 35" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
+              <path id="garden-branch-4" class="garden-branch" d="M 200 145 Q 240 90 250 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
+              <path id="garden-branch-5" class="garden-branch" d="M 200 145 Q 250 135 300 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
+
+              <g id="garden-flower-1" class="garden-flower">
+                <circle cx="100" cy="100" r="10" fill="#3B82F6" class="garden-glow"/>
+                <circle cx="100" cy="100" r="5" fill="#FFF"/>
+                <circle cx="100" cy="90" r="4" fill="#3B82F6" opacity="0.8"/>
+                <circle cx="100" cy="110" r="4" fill="#3B82F6" opacity="0.8"/>
+                <circle cx="90" cy="100" r="4" fill="#3B82F6" opacity="0.8"/>
+                <circle cx="110" cy="100" r="4" fill="#3B82F6" opacity="0.8"/>
+              </g>
+              <g id="garden-flower-2" class="garden-flower">
+                <circle cx="150" cy="50" r="10" fill="#D4AF37" class="garden-glow"/>
+                <circle cx="150" cy="50" r="5" fill="#FFF"/>
+                <circle cx="142" cy="44" r="5" fill="#D4AF37" opacity="0.8"/>
+                <circle cx="158" cy="44" r="5" fill="#D4AF37" opacity="0.8"/>
+                <circle cx="150" cy="60" r="5" fill="#D4AF37" opacity="0.8"/>
+              </g>
+              <g id="garden-flower-3" class="garden-flower">
+                <circle cx="200" cy="35" r="12" fill="#10B981" class="garden-glow"/>
+                <circle cx="200" cy="35" r="6" fill="#FFF"/>
+                <circle cx="190" cy="30" r="5" fill="#10B981"/>
+                <circle cx="210" cy="30" r="5" fill="#10B981"/>
+                <circle cx="200" cy="47" r="5" fill="#10B981"/>
+              </g>
+              <g id="garden-flower-4" class="garden-flower">
+                <circle cx="250" cy="50" r="10" fill="#EC4899" class="garden-glow"/>
+                <circle cx="250" cy="50" r="5" fill="#FFF"/>
+                <circle cx="242" cy="44" r="5" fill="#EC4899" opacity="0.8"/>
+                <circle cx="258" cy="44" r="5" fill="#EC4899" opacity="0.8"/>
+                <circle cx="250" cy="60" r="5" fill="#EC4899" opacity="0.8"/>
+              </g>
+              <g id="garden-flower-5" class="garden-flower">
+                <circle cx="300" cy="100" r="10" fill="#8B5CF6" class="garden-glow"/>
+                <circle cx="300" cy="100" r="5" fill="#FFF"/>
+                <circle cx="300" cy="90" r="4" fill="#8B5CF6" opacity="0.8"/>
+                <circle cx="300" cy="110" r="4" fill="#8B5CF6" opacity="0.8"/>
+                <circle cx="290" cy="100" r="4" fill="#8B5CF6" opacity="0.8"/>
+                <circle cx="310" cy="100" r="4" fill="#8B5CF6" opacity="0.8"/>
+              </g>
             </svg>
-            Votre Jardin de Lecture
+            <div class="garden-hint">Cochez vos prières pour faire fleurir votre jardin</div>
           </div>
-          
-          <svg class="garden-svg" viewBox="0 0 400 160">
-            <line x1="50" y1="145" x2="350" y2="145" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
-            <path d="M180 145 C 190 140, 210 140, 220 145" fill="none" stroke="rgba(212, 175, 55, 0.2)" stroke-width="2"/>
 
-            <path id="garden-branch-1" class="garden-branch" d="M 200 145 Q 150 135 100 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
-            <path id="garden-branch-2" class="garden-branch" d="M 200 145 Q 160 90 150 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
-            <path id="garden-branch-3" class="garden-branch" d="M 200 145 Q 200 80 200 35" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
-            <path id="garden-branch-4" class="garden-branch" d="M 200 145 Q 240 90 250 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
-            <path id="garden-branch-5" class="garden-branch" d="M 200 145 Q 250 135 300 100" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" stroke-linecap="round"/>
-
-            <g id="garden-flower-1" class="garden-flower">
-              <circle cx="100" cy="100" r="10" fill="#3B82F6" class="garden-glow"/>
-              <circle cx="100" cy="100" r="5" fill="#FFF"/>
-              <circle cx="100" cy="90" r="4" fill="#3B82F6" opacity="0.8"/>
-              <circle cx="100" cy="110" r="4" fill="#3B82F6" opacity="0.8"/>
-              <circle cx="90" cy="100" r="4" fill="#3B82F6" opacity="0.8"/>
-              <circle cx="110" cy="100" r="4" fill="#3B82F6" opacity="0.8"/>
-            </g>
-            <g id="garden-flower-2" class="garden-flower">
-              <circle cx="150" cy="50" r="10" fill="#D4AF37" class="garden-glow"/>
-              <circle cx="150" cy="50" r="5" fill="#FFF"/>
-              <circle cx="142" cy="44" r="5" fill="#D4AF37" opacity="0.8"/>
-              <circle cx="158" cy="44" r="5" fill="#D4AF37" opacity="0.8"/>
-              <circle cx="150" cy="60" r="5" fill="#D4AF37" opacity="0.8"/>
-            </g>
-            <g id="garden-flower-3" class="garden-flower">
-              <circle cx="200" cy="35" r="12" fill="#10B981" class="garden-glow"/>
-              <circle cx="200" cy="35" r="6" fill="#FFF"/>
-              <circle cx="190" cy="30" r="5" fill="#10B981"/>
-              <circle cx="210" cy="30" r="5" fill="#10B981"/>
-              <circle cx="200" cy="47" r="5" fill="#10B981"/>
-            </g>
-            <g id="garden-flower-4" class="garden-flower">
-              <circle cx="250" cy="50" r="10" fill="#EC4899" class="garden-glow"/>
-              <circle cx="250" cy="50" r="5" fill="#FFF"/>
-              <circle cx="242" cy="44" r="5" fill="#EC4899" opacity="0.8"/>
-              <circle cx="258" cy="44" r="5" fill="#EC4899" opacity="0.8"/>
-              <circle cx="250" cy="60" r="5" fill="#EC4899" opacity="0.8"/>
-            </g>
-            <g id="garden-flower-5" class="garden-flower">
-              <circle cx="300" cy="100" r="10" fill="#8B5CF6" class="garden-glow"/>
-              <circle cx="300" cy="100" r="5" fill="#FFF"/>
-              <circle cx="300" cy="90" r="4" fill="#8B5CF6" opacity="0.8"/>
-              <circle cx="300" cy="110" r="4" fill="#8B5CF6" opacity="0.8"/>
-              <circle cx="290" cy="100" r="4" fill="#8B5CF6" opacity="0.8"/>
-              <circle cx="310" cy="100" r="4" fill="#8B5CF6" opacity="0.8"/>
-            </g>
-          </svg>
-          <div class="garden-hint">Cochez vos prières pour faire fleurir votre jardin</div>
-        </div>
-
-        <!-- Consistency Heatmap Card -->
-        <div class="glass-card" style="margin-bottom: 24px; padding: 16px;">
-          <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top:0;">
-            <span>Assiduité du Wird</span>
-            <span style="font-size: 0.625rem; color:var(--text-muted); font-weight:normal;">28 derniers jours</span>
-          </h3>
-          <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
-            <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.5rem; color: var(--text-muted); padding-right: 4px; text-align:right; line-height:10px;">
-              <span>Lun</span><span></span><span>Mer</span><span></span><span>Ven</span><span></span><span>Dim</span>
+          <!-- Consistency Heatmap Card -->
+          <div class="glass-card" style="margin-bottom: 24px; padding: 16px;">
+            <h3 style="font-size: 0.875rem; font-weight: 600; color: #FFF; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; margin-top:0;">
+              <span>Assiduité du Wird</span>
+              <span style="font-size: 0.625rem; color:var(--text-muted); font-weight:normal;">28 derniers jours</span>
+            </h3>
+            <div style="display: flex; gap: 8px; align-items: center; justify-content: center;">
+              <div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.5rem; color: var(--text-muted); padding-right: 4px; text-align:right; line-height:10px;">
+                <span>Lun</span><span></span><span>Mer</span><span></span><span>Ven</span><span></span><span>Dim</span>
+              </div>
+              <div id="heatmap-grid" style="display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column; gap: 4px;">
+                <!-- Populated by JS -->
+              </div>
             </div>
-            <div id="heatmap-grid" style="display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column; gap: 4px;">
-              <!-- Populated by JS -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.5rem; color: var(--text-muted); margin-top: 10px;">
+              <span>Moins</span>
+              <span style="width:8px; height:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:2px;"></span>
+              <span style="width:8px; height:8px; background:rgba(212, 175, 55, 0.2); border:1px solid rgba(212, 175, 55, 0.4); border-radius:2px;"></span>
+              <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.2); border:1px solid rgba(16, 185, 129, 0.4); border-radius:2px;"></span>
+              <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.5); border:1px solid var(--emerald); border-radius:2px;"></span>
+              <span>Plus</span>
             </div>
-          </div>
-          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.5rem; color: var(--text-muted); margin-top: 10px;">
-            <span>Moins</span>
-            <span style="width:8px; height:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:2px;"></span>
-            <span style="width:8px; height:8px; background:rgba(212, 175, 55, 0.2); border:1px solid rgba(212, 175, 55, 0.4); border-radius:2px;"></span>
-            <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.2); border:1px solid rgba(16, 185, 129, 0.4); border-radius:2px;"></span>
-            <span style="width:8px; height:8px; background:rgba(16, 185, 129, 0.5); border:1px solid var(--emerald); border-radius:2px;"></span>
-            <span>Plus</span>
           </div>
         </div>
       </section>
