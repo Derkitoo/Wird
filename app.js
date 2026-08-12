@@ -1323,20 +1323,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Tapping a verse in Lecture mode used to play its audio immediately,
+  // which made it impossible to just tap a verse to read its tafsir without
+  // triggering recitation. Now a tap opens a small popover to choose.
+  let activeVersePopover = null;
+
+  function closeVerseActionPopover() {
+    if (!activeVersePopover) return;
+    activeVersePopover.remove();
+    activeVersePopover = null;
+    document.removeEventListener('click', closeVerseActionPopover);
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.removeEventListener('scroll', closeVerseActionPopover);
+  }
+
+  function showVerseActionPopover(verseEl, globalNum) {
+    closeVerseActionPopover();
+
+    const popover = document.createElement('div');
+    popover.className = 'verse-action-popover';
+    popover.innerHTML = `
+      <button class="verse-popover-btn" data-action="listen">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        Écouter
+      </button>
+      <button class="verse-popover-btn" data-action="tafsir">
+        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        Tafsir
+      </button>
+    `;
+    document.body.appendChild(popover);
+
+    const rect = verseEl.getBoundingClientRect();
+    const popRect = popover.getBoundingClientRect();
+    let top = rect.top - popRect.height - 8;
+    if (top < 8) top = rect.bottom + 8; // flip below if there's no room above
+    let left = rect.left + rect.width / 2 - popRect.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - popRect.width - 8));
+    popover.style.top = `${top}px`;
+    popover.style.left = `${left}px`;
+
+    popover.querySelector('[data-action="listen"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      playVerse(globalNum);
+      saveReadingPosition(globalNum);
+      closeVerseActionPopover();
+    });
+    popover.querySelector('[data-action="tafsir"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTafsirDrawer(globalNum);
+      saveReadingPosition(globalNum);
+      closeVerseActionPopover();
+    });
+
+    activeVersePopover = popover;
+    // Deferred so the click that opened the popover doesn't also close it
+    // via bubbling to this same listener.
+    setTimeout(() => {
+      document.addEventListener('click', closeVerseActionPopover);
+      const mainEl = document.querySelector('main');
+      if (mainEl) mainEl.addEventListener('scroll', closeVerseActionPopover, { once: true });
+    }, 0);
+  }
+
   // Setup click interactions for rendered verses
   function setupVerseInteractions() {
     const targetParent = document.getElementById('quran-page') || quranContainer;
     if (!targetParent) return;
 
-    // Read-mode dense Mushaf page has no per-verse button row, so both
-    // actions are reached via the two tap zones the layout already has:
-    // tapping the verse's Arabic text plays its recitation, tapping its
-    // small ayah-end marker opens tafsir (translation + explanation).
+    // Read-mode dense Mushaf page has no per-verse button row: tapping a
+    // verse's Arabic text opens a small "Écouter / Tafsir" choice instead of
+    // assuming which one the user wants, and its small ayah-end marker
+    // still jumps straight to tafsir as a shortcut.
     targetParent.querySelectorAll('.mushaf-verse').forEach(verseEl => {
       verseEl.addEventListener('click', (e) => {
+        e.stopPropagation();
         const num = parseInt(verseEl.dataset.verseNum, 10);
-        playVerse(num);
-        saveReadingPosition(num);
+        showVerseActionPopover(verseEl, num);
       });
     });
 

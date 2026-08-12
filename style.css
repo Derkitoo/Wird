@@ -864,6 +864,57 @@ main::-webkit-scrollbar {
   fill: currentColor;
 }
 
+/* Lecture-mode verse tap popover: "Écouter" vs "Tafsir" choice, positioned
+   in JS via fixed top/left next to the tapped verse. Uses the app's regular
+   UI colors (not --reading-*), since it floats above the reading page. */
+.verse-action-popover {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: versePopoverIn 0.15s ease-out;
+}
+
+@keyframes versePopoverIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.verse-popover-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.verse-popover-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.verse-popover-btn:hover,
+.verse-popover-btn:active {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
 .verse-text-ar {
   font-family: var(--font-quran);
   font-size: 1.6875rem;
