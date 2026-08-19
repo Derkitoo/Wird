@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     audioLoopRepetitions: '1', // '1', '3', '5', 'infinite'
     audioPlayCount: 1,
     readerMode: 'read', // 'read' or 'memorize' (used in Reader view only)
+    readerImmersive: false, // true = chrome (top bar, pagination, bottom nav) hidden, page alone
     hifzLevel: 'auto', // 'auto' (per-verse, driven by SRS status), or 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
     arabicFontSize: 26, // default in px
     encouragedActivities: new Set(),
@@ -125,6 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const readerJuzTitle = document.getElementById('reader-juz-title');
   const btnToggleReaderControls = document.getElementById('btn-toggle-reader-controls');
   const readerExtraControls = document.getElementById('reader-extra-controls');
+  const readerControlsTop = document.querySelector('.reader-controls-top');
+  const readerPagePagination = document.getElementById('reader-page-pagination');
+  const bottomNavEl = document.querySelector('.bottom-nav');
 
   // Native Audio HTML5 Player
   const nativeAudioPlayer = document.getElementById('native-audio-player');
@@ -607,14 +611,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }, { passive: true });
 
       // Tapping the page (outside a verse/marker/button, which already have
-      // their own tap actions) toggles the floating audio bar, independent
-      // of playback state — lets it be dismissed and brought back without
-      // needing to tap a fresh verse.
+      // their own tap actions) toggles fullscreen immersive mode: one tap
+      // hides everything but the page itself, another tap brings back the
+      // top bar, pagination, bottom nav and the options panel together —
+      // and the floating audio bar (if a verse is playing) follows suit.
       pageEl.addEventListener('click', (e) => {
         const isInteractive = e.target.closest('.mushaf-verse, .ayah-marker, .verse-block, .verse-action-btn, .hifz-masked-word, .hifz-masked-full-wrapper, .btn-srs');
         if (isInteractive) return;
-        if (!state.currentPlayingVerseNum || !audioWidget) return;
-        audioWidget.style.display = audioWidget.style.display === 'none' ? 'flex' : 'none';
+        toggleReaderImmersive();
       });
     }
 
@@ -1007,6 +1011,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // doesn't always match a literal string here byte-for-byte — without this,
   // startsWith() below silently fails even though the text is identical.
   const BISMILLAH_AR = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'.normalize('NFC');
+
+  // Fullscreen immersive toggle: hides/shows the reader's top bar,
+  // pagination, options panel, bottom nav and floating audio bar together —
+  // a single tap on the page cycles between "just the page" and "everything,
+  // including the options panel" (see the #quran-page click listener above).
+  function toggleReaderImmersive(forceState) {
+    const nextImmersive = typeof forceState === 'boolean' ? forceState : !state.readerImmersive;
+    state.readerImmersive = nextImmersive;
+
+    if (readerControlsTop) readerControlsTop.style.display = nextImmersive ? 'none' : 'flex';
+    if (readerPagePagination) readerPagePagination.style.display = nextImmersive ? 'none' : 'flex';
+    if (bottomNavEl) bottomNavEl.style.display = nextImmersive ? 'none' : 'flex';
+
+    if (readerExtraControls && btnToggleReaderControls) {
+      readerExtraControls.style.display = nextImmersive ? 'none' : 'block';
+      btnToggleReaderControls.setAttribute('aria-expanded', String(!nextImmersive));
+    }
+
+    if (audioWidget && state.currentPlayingVerseNum) {
+      audioWidget.style.display = nextImmersive ? 'none' : 'flex';
+    }
+
+    // Chrome height changed either way, so the page needs to be re-measured
+    // and re-fit to however much room is left now.
+    fitReaderPageToViewport();
+  }
 
   // Shrinks the current Lecture-mode page's Arabic flow (if needed) so the
   // whole page fits without scrolling, instead of forcing one fixed size
@@ -2296,6 +2326,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (viewId !== 'reader') cancelPageDwellTracking();
+
+    // Every view starts with the chrome visible — only the reader's own tap
+    // gesture is allowed to hide the bottom nav, and it should never carry
+    // over into a different view (e.g. if the user somehow leaves the reader
+    // while immersive without tapping the page again first).
+    if (state.readerImmersive) toggleReaderImmersive(false);
 
     // Hide all view panels safely
     document.querySelectorAll('.view').forEach(el => {
