@@ -1081,6 +1081,15 @@ document.addEventListener('DOMContentLoaded', () => {
       audioWidget.style.display = nextImmersive ? 'none' : 'flex';
     }
 
+    // main's bottom padding permanently reserves room for the floating nav
+    // (see .bottom-nav in style.css); with the nav hidden in immersive mode
+    // that padding is just unused scrollable space past the fitted page —
+    // a few tens of pixels the user can drag into for no reason, which
+    // defeats the point of "no scrolling, just the page". Drop it while
+    // immersive, restore it otherwise.
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.style.paddingBottom = nextImmersive ? '20px' : '';
+
     // Chrome height changed either way, so the page needs to be re-measured
     // and re-fit to however much room is left now.
     fitReaderPageToViewport();
@@ -1107,8 +1116,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Measured to the nav's own top edge (not just its height) so this stays
     // correct regardless of how it's positioned — e.g. the floating pill nav
     // sits above the viewport bottom with its own margin/safe-area offset,
-    // which a plain height subtraction wouldn't account for.
-    const navTop = bottomNav ? bottomNav.getBoundingClientRect().top : window.innerHeight;
+    // which a plain height subtraction wouldn't account for. A display:none
+    // nav (immersive mode) reports a zero-everything rect though, including
+    // top:0 — using that directly collapses "available" to a huge negative
+    // number and silently aborts all fitting, which is exactly backwards
+    // for immersive mode (no nav in the way = *more* room, not none). Fall
+    // back to the viewport's own bottom edge whenever the nav isn't actually
+    // occupying space.
+    const navRect = bottomNav ? bottomNav.getBoundingClientRect() : null;
+    const navTop = (navRect && navRect.height > 0) ? navRect.top : window.innerHeight;
     const paginationHeight = pagination ? pagination.getBoundingClientRect().height : 0;
     const available = navTop - pageRect.top - paginationHeight - 16;
     if (available <= 0) return;
