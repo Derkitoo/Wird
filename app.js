@@ -2170,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function loadHifzDashboard() {
     if (!hifzSurahList || !hifzJuzBadge) return;
 
+    renderKidMascotMessage();
     hifzJuzBadge.textContent = `Juz ${state.selectedJuz}`;
     hifzSurahList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
     updateHifzDueSummary();
@@ -3444,6 +3445,24 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('wird_kid_mode', String(state.kidMode));
     if (toggleKidMode) toggleKidMode.checked = state.kidMode;
     if (toggleKidModeOnboarding) toggleKidModeOnboarding.checked = state.kidMode;
+  }
+
+  // Owl mascot's greeting, picked fresh each time the workshop is opened —
+  // the banner itself only ever appears in normal document flow (see
+  // .kid-mascot-banner in style.css), so it can never sit on top of and
+  // hide the lesson content beneath it.
+  const KID_MASCOT_MESSAGES = [
+    "Salut ! Prêt à réviser aujourd'hui ? 🌟",
+    "Bravo pour ta constance, continue comme ça ! 💪",
+    "Chaque verset appris est une victoire ! 🏆",
+    "On y va doucement, un verset à la fois. 🦉",
+    "Je suis fier de toi, champion ! ✨"
+  ];
+
+  function renderKidMascotMessage() {
+    const el = document.getElementById('kid-mascot-message');
+    if (!el) return;
+    el.textContent = KID_MASCOT_MESSAGES[Math.floor(Math.random() * KID_MASCOT_MESSAGES.length)];
   }
 
   if (toggleKidMode) {
