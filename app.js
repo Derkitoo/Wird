@@ -4,6 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.serviceWorker.register('./sw.js')
       .then(reg => console.log('[PWA] Service Worker inscrit avec succès. Scope :', reg.scope))
       .catch(err => console.error('[PWA] Échec d\'inscription du Service Worker :', err));
+
+    // sw.js calls skipWaiting()/clients.claim() so a new version takes over
+    // as soon as it installs — but a tab that was already open keeps
+    // running the OLD cached JS/CSS until it reloads, since the swap only
+    // affects future network requests, not what's already executing. This
+    // reloads automatically the moment a new service worker takes control,
+    // so an update is never silently "invisible" until the next manual
+    // refresh (this is exactly why some changes can appear to not show up
+    // on a device that already had the app open).
+    let hasReloadedForNewSW = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hasReloadedForNewSW) return;
+      hasReloadedForNewSW = true;
+      window.location.reload();
+    });
   }
 
   // PWA Installation Prompt Trigger
@@ -740,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // isn't there yet to animate. Guarded by pageFlipInProgress so a rapid
   // double-tap can't queue up two overlapping transitions (each with its
   // own setTimeout) and double-advance the page.
-  const PAGE_FLIP_OUT_MS = 180;
+  const PAGE_FLIP_OUT_MS = 260;
   let pageFlipInProgress = false;
   function flipPageOut(direction, onComplete) {
     if (pageFlipInProgress) return;

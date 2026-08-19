@@ -793,44 +793,32 @@ main::-webkit-scrollbar {
    renderQuranText() then applies the matching "in" phase) — one element,
    no second DOM copy, no external library. A small directional drift
    (next → left, prev → right) keeps a sense of travel even though the
-   effect itself isn't direction-shaped like the flip was. */
-.page-glass-out-next,
-.page-glass-out-prev {
-  animation-duration: 0.18s;
-  animation-timing-function: ease-in;
-  animation-fill-mode: forwards;
-}
-
-.page-glass-out-next { animation-name: pageGlassOutNext; }
-.page-glass-out-prev { animation-name: pageGlassOutPrev; }
-
-.page-glass-in-next,
-.page-glass-in-prev {
-  animation-duration: 0.22s;
-  animation-timing-function: ease-out;
-}
-
-.page-glass-in-next { animation-name: pageGlassInNext; }
-.page-glass-in-prev { animation-name: pageGlassInPrev; }
+   effect itself isn't direction-shaped like the flip was. Opacity/scale
+   carry the effect as much as the blur does, so it still reads clearly
+   on devices/browsers that throttle filter animations. */
+.page-glass-out-next { animation: pageGlassOutNext 0.26s ease-in forwards; }
+.page-glass-out-prev { animation: pageGlassOutPrev 0.26s ease-in forwards; }
+.page-glass-in-next { animation: pageGlassInNext 0.3s ease-out forwards; }
+.page-glass-in-prev { animation: pageGlassInPrev 0.3s ease-out forwards; }
 
 @keyframes pageGlassOutNext {
-  from { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
-  to { filter: blur(14px); opacity: 0; transform: translateX(-14px) scale(0.98); }
+  0% { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  100% { filter: blur(20px); opacity: 0; transform: translateX(-22px) scale(0.94); }
 }
 
 @keyframes pageGlassInNext {
-  from { filter: blur(14px); opacity: 0; transform: translateX(14px) scale(1.02); }
-  to { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  0% { filter: blur(20px); opacity: 0; transform: translateX(22px) scale(1.06); }
+  100% { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @keyframes pageGlassOutPrev {
-  from { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
-  to { filter: blur(14px); opacity: 0; transform: translateX(14px) scale(0.98); }
+  0% { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  100% { filter: blur(20px); opacity: 0; transform: translateX(22px) scale(0.94); }
 }
 
 @keyframes pageGlassInPrev {
-  from { filter: blur(14px); opacity: 0; transform: translateX(-14px) scale(1.02); }
-  to { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  0% { filter: blur(20px); opacity: 0; transform: translateX(-22px) scale(1.06); }
+  100% { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
 }
 
 .verse-block {
