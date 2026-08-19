@@ -229,7 +229,8 @@
         </div>
 
         <!-- Prayer/Reading Segments checklist -->
-        <h2 style="font-size: 1rem; font-weight:600; margin-top: 24px; margin-bottom: 12px; color: #FFF; padding-left: 2px;">
+        <h2 class="dashboard-section-header">
+          <span class="dashboard-section-header-bar"></span>
           Progression par prière
         </h2>
         <div class="prayer-wird-grid">
@@ -272,6 +273,46 @@
               <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <span class="prayer-pages">P. 17-20</span>
+          </div>
+        </div>
+
+        <!-- Statistics grid: cumulative counters (never reset by the daily
+             Wird reset), computed by renderDashboardStats() every time the
+             dashboard is shown. -->
+        <h2 class="dashboard-section-header">
+          <span class="dashboard-section-header-bar"></span>
+          Statistiques
+        </h2>
+        <div id="dashboard-stats-grid" class="dashboard-stats-grid">
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">🔥</span>
+            <span id="stat-streak-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Streak actuel</span>
+          </div>
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">🏆</span>
+            <span id="stat-best-streak-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Meilleur streak</span>
+          </div>
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">📄</span>
+            <span id="stat-pages-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Pages lues</span>
+          </div>
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">📗</span>
+            <span id="stat-juz-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Juz terminés</span>
+          </div>
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">📅</span>
+            <span id="stat-active-days-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Jours actifs</span>
+          </div>
+          <div class="dashboard-stat-tile">
+            <span class="dashboard-stat-icon">📊</span>
+            <span id="stat-avg-value" class="dashboard-stat-value">0</span>
+            <span class="dashboard-stat-label">Pages / jour</span>
           </div>
         </div>
 

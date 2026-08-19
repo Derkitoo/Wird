@@ -472,6 +472,82 @@ main::-webkit-scrollbar {
   transform: scale(0.92);
 }
 
+/* Shared section header for the dashboard's essential sections (prayer
+   progression, statistics) — a small gradient accent bar instead of a
+   plain label, so these read as deliberate sections rather than
+   afterthought headings. */
+.dashboard-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: #FFF;
+  padding-left: 2px;
+}
+
+.dashboard-section-header-bar {
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--emerald));
+  box-shadow: 0 0 8px var(--primary-glow);
+  flex-shrink: 0;
+}
+
+/* Dashboard statistics grid — cumulative, never-resetting counters,
+   rendered by renderDashboardStats(). Same glass-card material as the
+   prayer cards, but a slightly stronger accent ring on the icon so the
+   grid reads as its own "richer" section rather than more of the same. */
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dashboard-stat-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 14px 6px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  transition: var(--transition-smooth);
+}
+
+.dashboard-stat-tile:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-card));
+  transform: translateY(-1px);
+}
+
+.dashboard-stat-icon {
+  font-size: 1.25rem;
+  filter: drop-shadow(0 0 6px var(--primary-glow));
+  margin-bottom: 2px;
+}
+
+.dashboard-stat-value {
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.1;
+}
+
+.dashboard-stat-label {
+  font-size: 0.5625rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 /* Dashboard "Voir plus" — reveals the secondary/supplementary cards
    (daily verse, page planner, garden, attendance heatmap) below the
    essential progress + prayer-checklist, which stay visible by default. */

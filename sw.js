@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wird-app-shell-v25';
+const CACHE_NAME = 'wird-app-shell-v26';
 const ASSETS = [
   './',
   './index.html',

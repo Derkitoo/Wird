@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     readerImmersive: false, // true = chrome (top bar, pagination, bottom nav) hidden, page alone
     missedWirdJuz: null, // Juz number left incomplete on a previous day, or null
     khatmGoal: null, // { multiplier, days, startDate, juzCompleted } or null
+    totalPagesReadAllTime: 0, // cumulative, never resets (unlike readPages)
+    totalJuzCompleted: 0, // cumulative "Juz Suivant" advances, all-time
     hifzLevel: 'auto', // 'auto' (per-verse, driven by SRS status), or 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
     arabicFontSize: 26, // default in px
     encouragedActivities: new Set(),
@@ -254,6 +256,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const khatmGoalProgressBar = document.getElementById('khatm-goal-progress-bar');
   const khatmGoalDetail = document.getElementById('khatm-goal-detail');
 
+  // Dashboard statistics grid
+  const dashboardStatsGrid = document.getElementById('dashboard-stats-grid');
+  const dashboardStatValues = {
+    streak: document.getElementById('stat-streak-value'),
+    bestStreak: document.getElementById('stat-best-streak-value'),
+    pages: document.getElementById('stat-pages-value'),
+    juz: document.getElementById('stat-juz-value'),
+    activeDays: document.getElementById('stat-active-days-value'),
+    avgPerDay: document.getElementById('stat-avg-value')
+  };
+
   // Language & display checkbox switches
   const toggleShowAr = document.getElementById('toggle-show-ar');
   const toggleShowFr = document.getElementById('toggle-show-fr');
@@ -304,6 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch (err) {
     console.warn("Failed to parse wird_khatm_goal", err);
   }
+
+  state.totalPagesReadAllTime = parseInt(localStorage.getItem('wird_total_pages_alltime'), 10) || 0;
+  state.totalJuzCompleted = parseInt(localStorage.getItem('wird_total_juz_completed'), 10) || 0;
 
   try {
     const savedPlan = localStorage.getItem('wird_page_plan');
@@ -609,6 +625,9 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('wird_khatm_goal', JSON.stringify(state.khatmGoal));
           renderKhatmGoal();
         }
+
+        state.totalJuzCompleted += 1;
+        localStorage.setItem('wird_total_juz_completed', String(state.totalJuzCompleted));
 
         showToast("Juz Suivant ! 🏁", `Bienvenue dans le Juz ${state.selectedJuz}.`);
 
@@ -2415,6 +2434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // celebration card and the summary button with it. Silent: no
       // confetti/toast replaying on every visit, only real completions.
       updateProgress(null, true); // also re-renders the heatmap internally
+      renderDashboardStats();
       checkInitialReadingPosition();
     } else {
       const hifzToolbar = document.getElementById('hifz-toolbar');
@@ -2460,6 +2480,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.readPages[juz][pageOrdinal]) return;
     state.readPages[juz][pageOrdinal] = true;
     localStorage.setItem('wird_read_pages', JSON.stringify(state.readPages));
+
+    // Unlike readPages (cleared on every daily reset), this never resets —
+    // it's the running total behind the dashboard's "Pages lues" stat.
+    state.totalPagesReadAllTime += 1;
+    localStorage.setItem('wird_total_pages_alltime', String(state.totalPagesReadAllTime));
+
     if (juz === state.selectedJuz) {
       autoCompletePrayersFromReadPages();
     }
@@ -3224,6 +3250,64 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('wird_khatm_goal');
       renderKhatmGoal();
     });
+  }
+
+  // Dashboard statistics: current/best streak are derived from
+  // consistencyHistory (the same date→level map the heatmap already reads),
+  // days actifs counts every date with at least one prayer checked, pages
+  // and Juz totals are the cumulative counters maintained above.
+  function computeWirdStreak() {
+    let streak = 0;
+    const cursor = new Date();
+    const todayStr = cursor.toISOString().split('T')[0];
+    if (!(state.consistencyHistory[todayStr] > 0)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    while (true) {
+      const dStr = cursor.toISOString().split('T')[0];
+      if (state.consistencyHistory[dStr] > 0) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  function computeWirdBestStreak() {
+    const activeDates = Object.keys(state.consistencyHistory)
+      .filter(d => state.consistencyHistory[d] > 0)
+      .sort();
+    if (activeDates.length === 0) return 0;
+
+    let best = 1;
+    let current = 1;
+    for (let i = 1; i < activeDates.length; i++) {
+      const prev = new Date(activeDates[i - 1] + 'T00:00:00');
+      const cur = new Date(activeDates[i] + 'T00:00:00');
+      const dayGap = Math.round((cur - prev) / (24 * 60 * 60 * 1000));
+      if (dayGap === 1) {
+        current++;
+      } else {
+        current = 1;
+      }
+      if (current > best) best = current;
+    }
+    return best;
+  }
+
+  function renderDashboardStats() {
+    if (!dashboardStatsGrid) return;
+    const activeDays = Object.values(state.consistencyHistory).filter(level => level > 0).length;
+    const avgPerDay = activeDays > 0 ? (state.totalPagesReadAllTime / activeDays) : 0;
+
+    dashboardStatValues.streak.textContent = String(computeWirdStreak());
+    dashboardStatValues.bestStreak.textContent = String(computeWirdBestStreak());
+    dashboardStatValues.pages.textContent = String(state.totalPagesReadAllTime);
+    dashboardStatValues.juz.textContent = String(state.totalJuzCompleted);
+    dashboardStatValues.activeDays.textContent = String(activeDays);
+    dashboardStatValues.avgPerDay.textContent = avgPerDay > 0 ? avgPerDay.toFixed(1) : '0';
   }
 
   // Load initial resume position card on launch
