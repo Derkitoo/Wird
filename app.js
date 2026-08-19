@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     khatmGoal: null, // { multiplier, days, startDate, juzCompleted } or null
     totalPagesReadAllTime: 0, // cumulative, never resets (unlike readPages)
     totalJuzCompleted: 0, // cumulative "Juz Suivant" advances, all-time
+    kidMode: false, // bigger/more playful presentation in the memorization workshop
     hifzLevel: 'auto', // 'auto' (per-verse, driven by SRS status), or 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
     arabicFontSize: 26, // default in px
     encouragedActivities: new Set(),
@@ -2658,7 +2659,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = rect.left - containerRect.left + rect.width / 2;
     const y = rect.top - containerRect.top + rect.height / 2;
 
-    for (let i = 0; i < 12; i++) {
+    // More festive burst in kid mode — same mechanic, just bigger.
+    const dotCount = state.kidMode ? 28 : 12;
+    for (let i = 0; i < dotCount; i++) {
       const dot = document.createElement('div');
       dot.className = 'confetti-dot';
       dot.style.position = 'absolute';
@@ -3423,6 +3426,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (drawerOverlay) {
     drawerOverlay.addEventListener('click', closeSettingsDrawer);
+  }
+
+  // ==================== KID MODE ====================
+  // Bigger, more playful presentation for the memorization workshop —
+  // same verses/tafsir/SRS data, just a friendlier frame (see the
+  // [data-kid-mode="true"] #view-memorize rules in style.css). Toggle
+  // lives in both Paramètres and the first-run welcome screen; both write
+  // to the same state/localStorage key and stay in sync with each other.
+  const toggleKidMode = document.getElementById('toggle-kid-mode');
+  const toggleKidModeOnboarding = document.getElementById('toggle-kid-mode-onboarding');
+
+  state.kidMode = localStorage.getItem('wird_kid_mode') === 'true';
+
+  function applyKidMode() {
+    document.documentElement.setAttribute('data-kid-mode', state.kidMode ? 'true' : 'false');
+    localStorage.setItem('wird_kid_mode', String(state.kidMode));
+    if (toggleKidMode) toggleKidMode.checked = state.kidMode;
+    if (toggleKidModeOnboarding) toggleKidModeOnboarding.checked = state.kidMode;
+  }
+
+  if (toggleKidMode) {
+    toggleKidMode.addEventListener('change', () => {
+      state.kidMode = toggleKidMode.checked;
+      applyKidMode();
+      showToast(state.kidMode ? "Mode enfant activé 👶" : "Mode enfant désactivé", "Atelier Mémorisation mis à jour.");
+    });
+  }
+  if (toggleKidModeOnboarding) {
+    toggleKidModeOnboarding.addEventListener('change', () => {
+      state.kidMode = toggleKidModeOnboarding.checked;
+      applyKidMode();
+    });
+  }
+
+  applyKidMode();
+
+  // ==================== FIRST-RUN ONBOARDING ====================
+  const onboardingDrawer = document.getElementById('onboarding-drawer');
+  const btnOnboardingContinue = document.getElementById('btn-onboarding-continue');
+
+  function closeOnboarding() {
+    if (!onboardingDrawer) return;
+    onboardingDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('active');
+    localStorage.setItem('wird_onboarding_seen', 'true');
+  }
+
+  if (btnOnboardingContinue) btnOnboardingContinue.addEventListener('click', closeOnboarding);
+  if (drawerOverlay && onboardingDrawer) {
+    drawerOverlay.addEventListener('click', () => {
+      if (onboardingDrawer.classList.contains('open')) closeOnboarding();
+    });
+  }
+
+  if (onboardingDrawer && !localStorage.getItem('wird_onboarding_seen')) {
+    onboardingDrawer.classList.add('open');
+    drawerOverlay.classList.add('active');
   }
 
   // Initialize UI & load data

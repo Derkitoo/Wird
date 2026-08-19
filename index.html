@@ -925,6 +925,34 @@
             <button class="palette-swatch" data-palette="amber" style="background:#D97706;" title="Ambre"></button>
           </div>
         </div>
+        <div class="settings-section">
+          <span class="settings-label">Atelier Mémorisation</span>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#FFF; font-size:0.8125rem; font-weight:600;">
+            <input type="checkbox" id="toggle-kid-mode" style="width:18px; height:18px; accent-color: var(--primary); cursor:pointer; flex-shrink:0;">
+            👶 Mode enfant (présentation plus grande et ludique)
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- First-run welcome: shown once, lets the parent switch on kid mode
+         right away instead of only discovering it later in Paramètres. -->
+    <div id="onboarding-drawer" class="tafsir-drawer">
+      <div class="tafsir-header">
+        <h3>Bienvenue 👋</h3>
+      </div>
+      <div class="tafsir-content" style="text-align:center;">
+        <p style="font-size:0.875rem; line-height:1.6; margin-bottom:18px;">
+          Avant de commencer votre Wird quotidien, une petite question :
+        </p>
+        <label style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; color:#FFF; font-size:0.875rem; font-weight:600; margin-bottom:20px;">
+          <input type="checkbox" id="toggle-kid-mode-onboarding" style="width:20px; height:20px; accent-color: var(--primary); cursor:pointer; flex-shrink:0;">
+          👶 Activer le mode enfant dans l'Atelier Mémorisation
+        </label>
+        <p style="font-size:0.6875rem; color:var(--text-muted); margin-bottom:20px; line-height:1.4;">
+          (Modifiable à tout moment dans Paramètres)
+        </p>
+        <button id="btn-onboarding-continue" class="btn-primary">Commencer</button>
       </div>
     </div>
 

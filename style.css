@@ -1999,6 +1999,52 @@ main::-webkit-scrollbar {
   cursor: pointer;
 }
 
+/* Kid mode: same verses/tafsir/SRS data as usual, just a bigger, bouncier,
+   more colorful frame around it — scoped to the memorization workshop and
+   its flashcard/masking UI only (see #toggle-kid-mode in app.js). */
+[data-kid-mode="true"] #view-memorize {
+  font-size: 1.0625em;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-stat-icon {
+  font-size: 1.5rem;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-stat-chip,
+[data-kid-mode="true"] #view-memorize .hifz-hero-card,
+[data-kid-mode="true"] #view-memorize .hifz-surah-card {
+  border-radius: 22px;
+  border-width: 2px;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-hero-btn {
+  border-radius: 999px;
+  animation: kidModeBounce 1.6s ease-in-out infinite;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-badge-icon {
+  font-size: 1.75rem;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-badge.earned {
+  animation: kidModeBounce 2s ease-in-out infinite;
+}
+
+[data-kid-mode="true"] #view-memorize .hifz-surah-card-play {
+  width: 42px;
+  height: 42px;
+  font-size: 0.9375rem;
+}
+
+[data-kid-mode="true"] #hifz-flashcard-modal #hifz-card-arabic {
+  font-size: 2rem !important;
+}
+
+@keyframes kidModeBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.06); }
+}
+
 /* Flashcard Arabic Container states */
 .flashcard-reveal-success {
   border-color: var(--emerald) !important;
