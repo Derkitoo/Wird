@@ -2406,7 +2406,15 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (viewId === 'memorize') {
       loadHifzDashboard();
     } else if (viewId === 'dashboard') {
-      renderHeatmap();
+      // Re-derives the celebration card (and the "Résumé du tafsir" access
+      // inside it) from the actually-persisted prayer state every time the
+      // dashboard is shown — not just right after checking the 5th prayer
+      // box in the same session. Without this, completing the Wird, then
+      // leaving and coming back to the dashboard (or just reloading) would
+      // silently drop back to the resume-reading card, hiding the
+      // celebration card and the summary button with it. Silent: no
+      // confetti/toast replaying on every visit, only real completions.
+      updateProgress(null, true); // also re-renders the heatmap internally
       checkInitialReadingPosition();
     } else {
       const hifzToolbar = document.getElementById('hifz-toolbar');
@@ -2502,7 +2510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Calculate Wird progress
-  function updateProgress(prayerCheckedName = null) {
+  function updateProgress(prayerCheckedName = null, silent = false) {
     const totalPrayers = Object.keys(state.prayersCompleted).length;
     const completedCount = Object.values(state.prayersCompleted).filter(Boolean).length;
     const percentage = Math.round((completedCount / totalPrayers) * 100);
@@ -2536,9 +2544,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (celebrationCard) celebrationCard.style.display = 'flex';
       if (resumeReadingCard) resumeReadingCard.style.display = 'none';
       if (startWirdContainer) startWirdContainer.style.display = 'none';
-      
-      createConfetti(progressBar);
-      showToast("Macha Allah ! 🏆", "Vous avez complété votre Wird du jour.");
+
+      if (!silent) {
+        createConfetti(progressBar);
+        showToast("Macha Allah ! 🏆", "Vous avez complété votre Wird du jour.");
+      }
     } else {
       if (celebrationCard) celebrationCard.style.display = 'none';
       if (state.lastViewedVerseNum && state.lastViewedJuz) {
