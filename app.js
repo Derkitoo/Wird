@@ -733,22 +733,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnNextPage) btnNextPage.disabled = state.currentPageIndex === pages.length - 1;
   }
 
-  // Page-turn flip: the "out" phase plays on the *current* content, then
-  // (once it's finished, not sooner) the page is actually turned — content
-  // swapped and the "in" phase applied in renderQuranText(). Skips straight
-  // to the swap if the page element isn't there yet to animate. Guarded by
-  // pageFlipInProgress so a rapid double-tap can't queue up two overlapping
-  // flips (each with its own setTimeout) and double-advance the page.
-  const PAGE_FLIP_OUT_MS = 200;
+  // Page-turn transition: the "out" phase (frosted-glass blur + fade) plays
+  // on the *current* content, then (once it's finished, not sooner) the
+  // page is actually turned — content swapped and the "in" phase applied
+  // in renderQuranText(). Skips straight to the swap if the page element
+  // isn't there yet to animate. Guarded by pageFlipInProgress so a rapid
+  // double-tap can't queue up two overlapping transitions (each with its
+  // own setTimeout) and double-advance the page.
+  const PAGE_FLIP_OUT_MS = 180;
   let pageFlipInProgress = false;
   function flipPageOut(direction, onComplete) {
     if (pageFlipInProgress) return;
     const pageEl = document.getElementById('quran-page');
     if (!pageEl) { onComplete(); return; }
     pageFlipInProgress = true;
-    pageEl.classList.remove('page-flip-out-next', 'page-flip-out-prev', 'page-flip-in-next', 'page-flip-in-prev');
-    void pageEl.offsetWidth; // force reflow so a repeated flip restarts the animation
-    pageEl.classList.add(direction === 'next' ? 'page-flip-out-next' : 'page-flip-out-prev');
+    pageEl.classList.remove('page-glass-out-next', 'page-glass-out-prev', 'page-glass-in-next', 'page-glass-in-prev');
+    void pageEl.offsetWidth; // force reflow so a repeated transition restarts the animation
+    pageEl.classList.add(direction === 'next' ? 'page-glass-out-next' : 'page-glass-out-prev');
     setTimeout(() => {
       pageFlipInProgress = false;
       onComplete();
@@ -1422,12 +1423,12 @@ document.addEventListener('DOMContentLoaded', () => {
     schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
     fitReaderPageToViewport();
 
-    // Play the flip-in half of the page turn, matching the "out" half
+    // Play the "in" half of the glass dissolve, matching the "out" half
     // already played by flipPageOut() before this render happened.
-    pageEl.classList.remove('page-flip-out-next', 'page-flip-out-prev', 'page-flip-in-next', 'page-flip-in-prev');
+    pageEl.classList.remove('page-glass-out-next', 'page-glass-out-prev', 'page-glass-in-next', 'page-glass-in-prev');
     if (direction === 'next' || direction === 'prev') {
       void pageEl.offsetWidth; // force reflow so the animation restarts on repeated navigation
-      pageEl.classList.add(direction === 'next' ? 'page-flip-in-next' : 'page-flip-in-prev');
+      pageEl.classList.add(direction === 'next' ? 'page-glass-in-next' : 'page-glass-in-prev');
     }
 
     // Scroll to target verse on load if requested

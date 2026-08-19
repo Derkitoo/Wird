@@ -747,15 +747,15 @@ main::-webkit-scrollbar {
 
 /* Single-page reader: no book/frame library — the page's height simply
    follows its content, and the reader's scrollable main area handles
-   anything taller than the viewport. Navigation plays a real page-turn:
-   the current page rotates away in 3D (.page-flip-out-*), then the new
-   content rotates in (.page-flip-in-*) — see goToNextPage/goToPrevPage
-   and renderQuranText() in app.js for the two-phase sequencing. */
+   anything taller than the viewport. Navigation plays a glassmorphism-style
+   dissolve: the current page frosts (blurs) and fades out, then the new
+   content fades in from a frosted state to sharp — see
+   goToNextPage/goToPrevPage and renderQuranText() in app.js for the
+   two-phase sequencing. */
 #reader-viewport {
   width: 100%;
   display: flex;
   justify-content: center;
-  perspective: 1600px;
 }
 
 .quran-page-sheet {
@@ -773,8 +773,6 @@ main::-webkit-scrollbar {
   box-sizing: border-box;
   color: var(--reading-text);
   min-height: 240px;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
 }
 
 .quran-page-sheet::before {
@@ -789,51 +787,50 @@ main::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* Page-turn transition: a real book-style flip, not a slide. Two phases,
-   sequenced in JS (goToNextPage/goToPrevPage call the "out" phase and wait
-   for it before swapping content and rendering; renderQuranText() then
-   applies the matching "in" phase) — one element, no second DOM copy, no
-   external library. Next = the mushaf's right-to-left turn (outgoing page
-   hinges on its left edge like it's being turned past; incoming page
-   hinges on its right edge, swinging into place). Prev is the mirror. */
-.page-flip-out-next {
-  animation: pageFlipOutNext 0.2s ease-in forwards;
-  transform-origin: left center;
+/* Page-turn transition: a frosted-glass dissolve, not a slide or a 3D
+   flip. Two phases, sequenced in JS (goToNextPage/goToPrevPage call the
+   "out" phase and wait for it before swapping content and rendering;
+   renderQuranText() then applies the matching "in" phase) — one element,
+   no second DOM copy, no external library. A small directional drift
+   (next → left, prev → right) keeps a sense of travel even though the
+   effect itself isn't direction-shaped like the flip was. */
+.page-glass-out-next,
+.page-glass-out-prev {
+  animation-duration: 0.18s;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
 }
 
-.page-flip-in-next {
-  animation: pageFlipInNext 0.22s ease-out;
-  transform-origin: right center;
+.page-glass-out-next { animation-name: pageGlassOutNext; }
+.page-glass-out-prev { animation-name: pageGlassOutPrev; }
+
+.page-glass-in-next,
+.page-glass-in-prev {
+  animation-duration: 0.22s;
+  animation-timing-function: ease-out;
 }
 
-.page-flip-out-prev {
-  animation: pageFlipOutPrev 0.2s ease-in forwards;
-  transform-origin: right center;
+.page-glass-in-next { animation-name: pageGlassInNext; }
+.page-glass-in-prev { animation-name: pageGlassInPrev; }
+
+@keyframes pageGlassOutNext {
+  from { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  to { filter: blur(14px); opacity: 0; transform: translateX(-14px) scale(0.98); }
 }
 
-.page-flip-in-prev {
-  animation: pageFlipInPrev 0.22s ease-out;
-  transform-origin: left center;
+@keyframes pageGlassInNext {
+  from { filter: blur(14px); opacity: 0; transform: translateX(14px) scale(1.02); }
+  to { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
 }
 
-@keyframes pageFlipOutNext {
-  from { transform: rotateY(0deg); opacity: 1; }
-  to { transform: rotateY(-96deg); opacity: 0.25; }
+@keyframes pageGlassOutPrev {
+  from { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
+  to { filter: blur(14px); opacity: 0; transform: translateX(14px) scale(0.98); }
 }
 
-@keyframes pageFlipInNext {
-  from { transform: rotateY(96deg); opacity: 0.25; }
-  to { transform: rotateY(0deg); opacity: 1; }
-}
-
-@keyframes pageFlipOutPrev {
-  from { transform: rotateY(0deg); opacity: 1; }
-  to { transform: rotateY(96deg); opacity: 0.25; }
-}
-
-@keyframes pageFlipInPrev {
-  from { transform: rotateY(-96deg); opacity: 0.25; }
-  to { transform: rotateY(0deg); opacity: 1; }
+@keyframes pageGlassInPrev {
+  from { filter: blur(14px); opacity: 0; transform: translateX(-14px) scale(1.02); }
+  to { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
 }
 
 .verse-block {
