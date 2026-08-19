@@ -503,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
       drawerOverlay.addEventListener('click', () => {
         closeHifzFlashcard();
         closeTafsirDrawer();
+        closeJuzSummaryDrawer();
       });
     }
 
@@ -3022,6 +3023,46 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeTafsirDrawer);
+
+  // Juz Summary Drawer: concatenated Tafsir Al-Muyassar (Arabic) for a
+  // whole Juz, opened from the celebration card once it's finished.
+  const juzSummaryDrawer = document.getElementById('juz-summary-drawer');
+  const juzSummaryRef = document.getElementById('juz-summary-ref');
+  const juzSummaryContent = document.getElementById('juz-summary-content');
+  const closeJuzSummaryDrawerBtn = document.getElementById('close-juz-summary-drawer');
+  const btnJuzSummary = document.getElementById('btn-juz-summary');
+
+  function closeJuzSummaryDrawer() {
+    if (juzSummaryDrawer) juzSummaryDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('active');
+  }
+
+  async function openJuzSummaryDrawer(juzNumber) {
+    if (!juzSummaryDrawer || !juzSummaryContent) return;
+    juzSummaryRef.textContent = `Juz ${juzNumber}`;
+    juzSummaryContent.innerHTML = TAFSIR_SPINNER_HTML;
+    juzSummaryDrawer.classList.add('open');
+    drawerOverlay.classList.add('active');
+
+    try {
+      const bySurah = await QuranAPI.fetchJuzTafsirMuyassar(juzNumber);
+      const html = bySurah.map(surah => {
+        const versesHtml = surah.verses.map(v =>
+          `<span style="color: var(--primary); font-weight:700;">(${v.numberInSurah})</span> ${v.text}`
+        ).join(' ');
+        return `<h4 style="margin: 16px 0 8px; color: var(--primary); font-size: 0.9375rem;">${surah.surahName}</h4><p style="margin:0 0 8px;">${versesHtml}</p>`;
+      }).join('');
+      juzSummaryContent.innerHTML = html || "Aucun résumé disponible pour ce Juz.";
+    } catch (error) {
+      console.error('Juz tafsir summary error:', error);
+      juzSummaryContent.textContent = "Impossible de charger le résumé pour le moment.";
+    }
+  }
+
+  if (closeJuzSummaryDrawerBtn) closeJuzSummaryDrawerBtn.addEventListener('click', closeJuzSummaryDrawer);
+  if (btnJuzSummary) {
+    btnJuzSummary.addEventListener('click', () => openJuzSummaryDrawer(state.selectedJuz));
+  }
 
   // Social Actions static bindings
   const actionEncourageBtns = document.querySelectorAll('.btn-encourage');

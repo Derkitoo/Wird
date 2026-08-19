@@ -185,9 +185,14 @@
           <span style="font-size: 1.75rem;">🏆</span>
           <h4 style="font-size: 0.9375rem; font-weight:700; color:#FFF; margin: 4px 0 0 0;">Wird du jour complété !</h4>
           <p style="font-size: 0.6875rem; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">Vous avez lu l'équivalent d'un Juz complet aujourd'hui. Votre assiduité est enregistrée.</p>
-          <button id="btn-next-juz-trigger" class="btn-action-small" style="background: var(--emerald); color:#FFF; border:none; padding: 8px 16px; border-radius: var(--radius-md); font-weight:700; margin: 0 auto; width:auto; justify-content:center; cursor:pointer;">
-            Passer au Juz Suivant ➔
-          </button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+            <button id="btn-juz-summary" class="btn-action-small" style="background: rgba(212,175,55,0.1); border: 1px solid var(--primary); color: var(--primary); padding: 8px 16px; border-radius: var(--radius-md); font-weight:700; width:auto; justify-content:center; cursor:pointer;">
+              📖 Résumé du tafsir (AR)
+            </button>
+            <button id="btn-next-juz-trigger" class="btn-action-small" style="background: var(--emerald); color:#FFF; border:none; padding: 8px 16px; border-radius: var(--radius-md); font-weight:700; width:auto; justify-content:center; cursor:pointer;">
+              Passer au Juz Suivant ➔
+            </button>
+          </div>
         </div>
 
         <!-- Resume Reading Card (Last position helper) -->
@@ -917,6 +922,18 @@
             Éviter les disputes stériles et se concentrer sur les questions qui mènent à l'action.
           </span>
         </div>
+      </div>
+    </div>
+
+    <!-- Juz Summary Drawer: concatenated Tafsir Al-Muyassar (Arabic) for
+         the whole Juz just finished — shown from the celebration card. -->
+    <div id="juz-summary-drawer" class="tafsir-drawer">
+      <div class="tafsir-header">
+        <h3>Résumé du Tafsir <span id="juz-summary-ref">Juz 30</span></h3>
+        <button id="close-juz-summary-drawer" class="btn-close-drawer">&times;</button>
+      </div>
+      <div class="tafsir-content" id="juz-summary-content" style="direction:rtl; text-align:right; font-family:var(--font-quran); font-size:1.0625rem; line-height:2;">
+        <!-- Populated by JS -->
       </div>
     </div>
 

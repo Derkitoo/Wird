@@ -167,6 +167,44 @@ const QuranAPI = {
     return this._ibnKathirSurahPromises[surahNum];
   },
 
+  // Tafsir Al-Muyassar (Arabic) — concise, modern, verse-by-verse, from
+  // King Fahd Complex. Much shorter per verse than Ibn Kathir, so a whole
+  // Juz concatenated reads like an actual summary rather than a wall of
+  // text. Served directly by api.alquran.cloud (same CORS-enabled host
+  // already used for Quran text/translation/audio), one request per Juz.
+  _muyassarJuzPromises: {},
+
+  async fetchJuzTafsirMuyassar(juzNumber) {
+    if (this._muyassarJuzPromises[juzNumber]) return this._muyassarJuzPromises[juzNumber];
+    const cacheKey = `muyassar_ar_juz_${juzNumber}`;
+    this._muyassarJuzPromises[juzNumber] = (async () => {
+      const cached = await getCachedTafsirIndex(cacheKey);
+      if (cached) return cached;
+
+      const res = await fetch(`${this.BASE_URL}/juz/${juzNumber}/ar.muyassar`);
+      if (!res.ok) throw new Error(`Tafsir Muyassar fetch failed for juz ${juzNumber}`);
+      const json = await res.json();
+      const ayahs = json.data.ayahs;
+
+      // Grouped by surah, in order, so the summary reads as one surah's
+      // worth of commentary at a time rather than a flat verse list.
+      const bySurah = [];
+      let currentSurahNum = null;
+      ayahs.forEach((ayah) => {
+        if (!ayah.text || !ayah.text.trim()) return;
+        if (ayah.surah.number !== currentSurahNum) {
+          currentSurahNum = ayah.surah.number;
+          bySurah.push({ surahName: ayah.surah.name, surahNumber: currentSurahNum, verses: [] });
+        }
+        bySurah[bySurah.length - 1].verses.push({ numberInSurah: ayah.numberInSurah, text: ayah.text });
+      });
+
+      await cacheTafsirIndex(cacheKey, bySurah);
+      return bySurah;
+    })();
+    return this._muyassarJuzPromises[juzNumber];
+  },
+
   // Curated list of popular reciters
   getReciters() {
     return [
