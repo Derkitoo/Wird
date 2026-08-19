@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
     audioPlayCount: 1,
     readerMode: 'read', // 'read' or 'memorize' (used in Reader view only)
     readerImmersive: false, // true = chrome (top bar, pagination, bottom nav) hidden, page alone
+    missedWirdJuz: null, // Juz number left incomplete on a previous day, or null
+    khatmGoal: null, // { multiplier, days, startDate, juzCompleted } or null
     hifzLevel: 'auto', // 'auto' (per-verse, driven by SRS status), or 1: Complet, 2: 1er Mot, 3: Troué, 4: Masqué (Reader view only)
     arabicFontSize: 26, // default in px
     encouragedActivities: new Set(),
@@ -221,6 +223,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const resumeReadingDetail = document.getElementById('resume-reading-detail');
   const btnResumeReading = document.getElementById('btn-resume-reading');
   const startWirdContainer = document.getElementById('start-wird-container');
+  const missedWirdCard = document.getElementById('missed-wird-card');
+  const missedWirdRef = document.getElementById('missed-wird-ref');
+  const btnMissedWirdResume = document.getElementById('btn-missed-wird-resume');
+  const btnMissedWirdDismiss = document.getElementById('btn-missed-wird-dismiss');
+
+  // Khatm goal DOM elements
+  const khatmGoalEmpty = document.getElementById('khatm-goal-empty');
+  const khatmGoalActive = document.getElementById('khatm-goal-active');
+  const khatmGoalMultiplierSelect = document.getElementById('khatm-goal-multiplier');
+  const khatmGoalDaysInput = document.getElementById('khatm-goal-days');
+  const btnKhatmGoalSet = document.getElementById('btn-khatm-goal-set');
+  const btnKhatmGoalCancel = document.getElementById('btn-khatm-goal-cancel');
+  const khatmGoalLabel = document.getElementById('khatm-goal-label');
+  const khatmGoalProgressBar = document.getElementById('khatm-goal-progress-bar');
+  const khatmGoalDetail = document.getElementById('khatm-goal-detail');
 
   // Language & display checkbox switches
   const toggleShowAr = document.getElementById('toggle-show-ar');
@@ -267,6 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   try {
+    const savedKhatmGoal = localStorage.getItem('wird_khatm_goal');
+    if (savedKhatmGoal) state.khatmGoal = JSON.parse(savedKhatmGoal);
+  } catch (err) {
+    console.warn("Failed to parse wird_khatm_goal", err);
+  }
+
+  try {
     const savedPlan = localStorage.getItem('wird_page_plan');
     if (savedPlan) state.wirdPagePlan = JSON.parse(savedPlan);
   } catch (err) {
@@ -298,6 +322,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const todayDateStr = new Date().toISOString().split('T')[0];
   const lastActiveDate = localStorage.getItem('wird_last_active_date');
   if (lastActiveDate && lastActiveDate !== todayDateStr) {
+    // If yesterday's Wird wasn't fully checked off, remember which Juz it
+    // was so the dashboard can offer to pick it back up — persisted (not
+    // just in-memory) so it survives reloads until the user dismisses or
+    // resumes it, since this reset block only runs once per day boundary.
+    const wasComplete = Object.values(state.prayersCompleted).filter(Boolean).length === 5;
+    if (!wasComplete) {
+      localStorage.setItem('wird_missed_reminder_juz', String(state.selectedJuz));
+    }
+
     state.prayersCompleted = {
       fajr: false,
       dhuhr: false,
@@ -308,9 +341,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('wird_prayers_completed', JSON.stringify(state.prayersCompleted));
     state.readPages = {};
     localStorage.setItem('wird_read_pages', JSON.stringify(state.readPages));
-    showToast("Nouveau jour 🌅", "Votre Wird quotidien a été réinitialisé pour aujourd'hui.");
+
+    if (wasComplete) {
+      showToast("Nouveau jour 🌅", "Votre Wird quotidien a été réinitialisé pour aujourd'hui.");
+    } else {
+      showToast("Wird non terminé ⚠️", `Le Wird du Juz ${state.selectedJuz} n'était pas fini hier — vous pouvez le reprendre.`);
+    }
   }
   localStorage.setItem('wird_last_active_date', todayDateStr);
+
+  const missedReminderJuzRaw = localStorage.getItem('wird_missed_reminder_juz');
+  if (missedReminderJuzRaw) state.missedWirdJuz = parseInt(missedReminderJuzRaw, 10);
 
   // Initialize selectors & views
   function initSelectors() {
@@ -547,8 +588,14 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('wird_last_page');
         state.currentPageIndex = 0;
 
+        if (state.khatmGoal) {
+          state.khatmGoal.juzCompleted += 1;
+          localStorage.setItem('wird_khatm_goal', JSON.stringify(state.khatmGoal));
+          renderKhatmGoal();
+        }
+
         showToast("Juz Suivant ! 🏁", `Bienvenue dans le Juz ${state.selectedJuz}.`);
-        
+
         updateProgress();
         stopAudio();
         switchView('reader');
@@ -3039,8 +3086,108 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Shows/hides the "yesterday's Wird wasn't finished" card based on
+  // state.missedWirdJuz, set from the persisted flag during the daily
+  // reset check. Cleared (card hidden, flag removed) once the user
+  // resumes it or dismisses it — never reappears on its own after that.
+  function renderMissedWirdCard() {
+    if (!missedWirdCard) return;
+    if (state.missedWirdJuz) {
+      missedWirdRef.textContent = `Juz ${state.missedWirdJuz}`;
+      missedWirdCard.style.display = 'flex';
+    } else {
+      missedWirdCard.style.display = 'none';
+    }
+  }
+
+  function dismissMissedWirdReminder() {
+    state.missedWirdJuz = null;
+    localStorage.removeItem('wird_missed_reminder_juz');
+    renderMissedWirdCard();
+  }
+
+  if (btnMissedWirdDismiss) {
+    btnMissedWirdDismiss.addEventListener('click', dismissMissedWirdReminder);
+  }
+  if (btnMissedWirdResume) {
+    btnMissedWirdResume.addEventListener('click', () => {
+      const juz = state.missedWirdJuz;
+      dismissMissedWirdReminder();
+      if (juz) {
+        state.selectedJuz = juz;
+        localStorage.setItem('wird_selected_juz', juz);
+        if (selectJuz) selectJuz.value = juz;
+        switchView('reader');
+      }
+    });
+  }
+
+  // Khatm goal: finish the Quran `multiplier` times within `days` days
+  // (e.g. Ramadan). juzCompleted increments each time the user advances to
+  // the next Juz (see btnNextJuzTrigger below) while a goal is active — the
+  // existing single-Juz-per-Wird mechanic is unchanged, this just tracks
+  // progress against it and tells the user the daily pace they need.
+  const QURAN_TOTAL_JUZ = 30;
+
+  function renderKhatmGoal() {
+    if (!khatmGoalEmpty || !khatmGoalActive) return;
+    const goal = state.khatmGoal;
+    if (!goal) {
+      khatmGoalEmpty.style.display = 'flex';
+      khatmGoalActive.style.display = 'none';
+      return;
+    }
+
+    khatmGoalEmpty.style.display = 'none';
+    khatmGoalActive.style.display = 'flex';
+
+    const targetJuz = goal.multiplier * QURAN_TOTAL_JUZ;
+    const juzCompleted = Math.min(goal.juzCompleted, targetJuz);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const startDate = new Date(goal.startDate + 'T00:00:00');
+    const today = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+    const daysElapsed = Math.max(0, Math.round((today - startDate) / msPerDay));
+    const daysRemaining = Math.max(1, goal.days - daysElapsed);
+    const juzRemaining = Math.max(0, targetJuz - juzCompleted);
+    const pacePerDay = Math.ceil(juzRemaining / daysRemaining);
+
+    khatmGoalLabel.textContent = `Khatm x${goal.multiplier} en ${goal.days} jours`;
+    khatmGoalProgressBar.style.width = `${Math.min(100, (juzCompleted / targetJuz) * 100)}%`;
+
+    if (juzRemaining === 0) {
+      khatmGoalDetail.textContent = `🎉 Objectif atteint ! ${juzCompleted}/${targetJuz} Juz complétés.`;
+    } else {
+      khatmGoalDetail.textContent = `${juzCompleted}/${targetJuz} Juz — ~${pacePerDay} Juz/jour nécessaires (${daysRemaining} j restants)`;
+    }
+  }
+
+  if (btnKhatmGoalSet) {
+    btnKhatmGoalSet.addEventListener('click', () => {
+      const multiplier = parseInt(khatmGoalMultiplierSelect.value, 10);
+      const days = Math.max(1, parseInt(khatmGoalDaysInput.value, 10) || 30);
+      state.khatmGoal = {
+        multiplier,
+        days,
+        startDate: new Date().toISOString().split('T')[0],
+        juzCompleted: 0
+      };
+      localStorage.setItem('wird_khatm_goal', JSON.stringify(state.khatmGoal));
+      renderKhatmGoal();
+    });
+  }
+
+  if (btnKhatmGoalCancel) {
+    btnKhatmGoalCancel.addEventListener('click', () => {
+      state.khatmGoal = null;
+      localStorage.removeItem('wird_khatm_goal');
+      renderKhatmGoal();
+    });
+  }
+
   // Load initial resume position card on launch
   function checkInitialReadingPosition() {
+    renderMissedWirdCard();
+    renderKhatmGoal();
     if (state.lastViewedVerseNum && state.lastViewedJuz) {
       const isCompleted = Object.values(state.prayersCompleted).filter(Boolean).length === 5;
       if (!isCompleted) {

@@ -162,6 +162,24 @@
             </div>
           </div>
         </div>
+        <!-- Missed Wird Reminder (shown on reopen when yesterday's Wird
+             wasn't finished; stays until dismissed or resumed) -->
+        <div id="missed-wird-card" class="glass-card" style="display: none; margin-top: 16px; padding: 14px 16px; align-items: center; justify-content: space-between; gap: 12px; border-left: 3px solid var(--ruby); background: rgba(239, 68, 68, 0.06); animation: fadeIn 0.4s ease-out;">
+          <div style="text-align: left;">
+            <span style="font-size: 0.5625rem; text-transform:uppercase; color:var(--ruby); font-weight:700; display:block; margin-bottom: 2px;">⚠️ Wird non terminé</span>
+            <h4 id="missed-wird-ref" style="font-size: 0.8125rem; font-weight:700; color:#FFF; margin:0;">Juz 30</h4>
+            <p style="font-size: 0.625rem; color:var(--text-muted); margin:0; margin-top:2px;">Non complété hier — vous pouvez encore le finir.</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <button id="btn-missed-wird-resume" class="btn-action-small" style="background: var(--ruby); color:#FFF; font-weight:700; padding:8px 14px; border-radius:var(--radius-md); font-size: 0.6875rem; cursor:pointer; width:auto; justify-content:center;">
+              Continuer
+            </button>
+            <button id="btn-missed-wird-dismiss" title="Ignorer" style="background:none; border:none; color:var(--text-muted); font-size: 1rem; cursor:pointer; padding: 4px 6px; line-height:1;">
+              ✕
+            </button>
+          </div>
+        </div>
+
         <!-- Celebration Card (Shown when 100% prayers checked) -->
         <div id="celebration-card" class="glass-card" style="display: none; margin-top: 16px; padding: 20px; text-align: center; border: 1.5px solid var(--emerald); background: rgba(16, 185, 129, 0.05); animation: pulseGreen 2s infinite; flex-direction:column; align-items:center; gap:8px;">
           <span style="font-size: 1.75rem;">🏆</span>
@@ -278,6 +296,45 @@
               <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
               Méditer & Comprendre le Tafsir
             </button>
+          </div>
+
+          <!-- Khatm goal: finish the Quran N times within a chosen period —
+               e.g. for Ramadan. Tracks Juz completed toward the target and
+               shows the daily pace needed to reach it in time. -->
+          <div id="khatm-goal-card" class="glass-card" style="margin-bottom: 16px; padding: 16px; display:flex; flex-direction:column; gap:10px;">
+            <h3 style="font-size:0.875rem; font-weight:600; color:#FFF; margin:0; display:flex; align-items:center; gap:6px;">
+              🌙 Objectif Khatm
+            </h3>
+
+            <div id="khatm-goal-empty" style="display:flex; flex-direction:column; gap:8px;">
+              <p style="font-size:0.75rem; color:var(--text-secondary); margin:0; line-height:1.4;">
+                Fixez-vous un objectif — utile pour le Ramadan (terminer le Coran 1, 2 ou 3 fois dans le mois).
+              </p>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <select id="khatm-goal-multiplier" style="flex:1; min-width:90px; background: rgba(10,14,26,0.6); border:1px solid var(--border-card); color:#FFF; padding:6px 8px; border-radius:var(--radius-sm); font-size:0.75rem;">
+                  <option value="1">1 fois</option>
+                  <option value="2">2 fois</option>
+                  <option value="3">3 fois</option>
+                </select>
+                <span style="font-size:0.75rem; color:var(--text-secondary);">en</span>
+                <input type="number" id="khatm-goal-days" value="30" min="1" max="90" style="width:56px; background: rgba(10,14,26,0.6); border:1px solid var(--border-card); color:#FFF; padding:6px 8px; border-radius:var(--radius-sm); font-size:0.75rem;">
+                <span style="font-size:0.75rem; color:var(--text-secondary);">jours</span>
+              </div>
+              <button id="btn-khatm-goal-set" class="btn-action-small" style="background: var(--primary); color:#070913; font-weight:700; padding:8px; border-radius:var(--radius-md); font-size:0.75rem; cursor:pointer; justify-content:center;">
+                Définir l'objectif
+              </button>
+            </div>
+
+            <div id="khatm-goal-active" style="display:none; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+                <span id="khatm-goal-label" style="font-size:0.75rem; font-weight:700; color:var(--primary);">Khatm x2 en 30 jours</span>
+                <button id="btn-khatm-goal-cancel" style="background:none; border:none; color:var(--text-muted); font-size:0.6875rem; cursor:pointer; padding:0; text-decoration:underline; flex-shrink:0;">Annuler</button>
+              </div>
+              <div style="height:8px; background: rgba(255,255,255,0.05); border-radius:4px; overflow:hidden;">
+                <div id="khatm-goal-progress-bar" style="height:100%; width:0%; background: linear-gradient(90deg, var(--primary) 0%, var(--emerald) 100%); transition: width 0.4s ease;"></div>
+              </div>
+              <p id="khatm-goal-detail" style="font-size:0.6875rem; color:var(--text-secondary); margin:0;">0/60 Juz</p>
+            </div>
           </div>
 
           <!-- Toggler for Wird Configurer -->
