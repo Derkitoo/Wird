@@ -658,13 +658,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, { passive: true });
 
-      // Tapping the page (outside a verse/marker/button, which already have
-      // their own tap actions) toggles fullscreen immersive mode: one tap
-      // hides everything but the page itself, another tap brings back the
-      // top bar, pagination, bottom nav and the options panel together —
-      // and the floating audio bar (if a verse is playing) follows suit.
+      // Tapping the page (including a verse's own text — it has no tap
+      // action of its own in Lecture mode) toggles fullscreen immersive
+      // mode: one tap hides everything but the page itself, another tap
+      // brings back the top bar, pagination, bottom nav and the options
+      // panel together — and the floating audio bar (if a verse is
+      // playing) follows suit. Only the ayah-end marker (tafsir) and
+      // Mémoriser mode's per-verse buttons keep their own tap action.
       pageEl.addEventListener('click', (e) => {
-        const isInteractive = e.target.closest('.mushaf-verse, .ayah-marker, .verse-block, .verse-action-btn, .hifz-masked-word, .hifz-masked-full-wrapper, .btn-srs');
+        const isInteractive = e.target.closest('.ayah-marker, .verse-block, .verse-action-btn, .hifz-masked-word, .hifz-masked-full-wrapper, .btn-srs');
         if (isInteractive) return;
         toggleReaderImmersive();
       });
@@ -731,24 +733,50 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnNextPage) btnNextPage.disabled = state.currentPageIndex === pages.length - 1;
   }
 
+  // Page-turn flip: the "out" phase plays on the *current* content, then
+  // (once it's finished, not sooner) the page is actually turned — content
+  // swapped and the "in" phase applied in renderQuranText(). Skips straight
+  // to the swap if the page element isn't there yet to animate. Guarded by
+  // pageFlipInProgress so a rapid double-tap can't queue up two overlapping
+  // flips (each with its own setTimeout) and double-advance the page.
+  const PAGE_FLIP_OUT_MS = 200;
+  let pageFlipInProgress = false;
+  function flipPageOut(direction, onComplete) {
+    if (pageFlipInProgress) return;
+    const pageEl = document.getElementById('quran-page');
+    if (!pageEl) { onComplete(); return; }
+    pageFlipInProgress = true;
+    pageEl.classList.remove('page-flip-out-next', 'page-flip-out-prev', 'page-flip-in-next', 'page-flip-in-prev');
+    void pageEl.offsetWidth; // force reflow so a repeated flip restarts the animation
+    pageEl.classList.add(direction === 'next' ? 'page-flip-out-next' : 'page-flip-out-prev');
+    setTimeout(() => {
+      pageFlipInProgress = false;
+      onComplete();
+    }, PAGE_FLIP_OUT_MS);
+  }
+
   function goToPrevPage() {
     if (state.currentPageIndex <= 0) return;
-    state.currentPageIndex--;
-    localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
-    localStorage.setItem('wird_last_juz', state.selectedJuz);
-    stopAudio();
     playPaperRustleSound();
-    renderQuranText(true, 'prev');
+    flipPageOut('prev', () => {
+      state.currentPageIndex--;
+      localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
+      localStorage.setItem('wird_last_juz', state.selectedJuz);
+      stopAudio();
+      renderQuranText(true, 'prev');
+    });
   }
 
   function goToNextPage() {
     if (!state.pagesList || state.currentPageIndex >= state.pagesList.length - 1) return;
-    state.currentPageIndex++;
-    localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
-    localStorage.setItem('wird_last_juz', state.selectedJuz);
-    stopAudio();
     playPaperRustleSound();
-    renderQuranText(true, 'next');
+    flipPageOut('next', () => {
+      state.currentPageIndex++;
+      localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
+      localStorage.setItem('wird_last_juz', state.selectedJuz);
+      stopAudio();
+      renderQuranText(true, 'next');
+    });
   }
 
   // Calculate pages sum and alert if not equal to 20 pages (1 Juz)
@@ -1394,11 +1422,12 @@ document.addEventListener('DOMContentLoaded', () => {
     schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
     fitReaderPageToViewport();
 
-    // Play the slide-in transition matching the navigation direction, if any
-    pageEl.classList.remove('page-slide-next', 'page-slide-prev');
+    // Play the flip-in half of the page turn, matching the "out" half
+    // already played by flipPageOut() before this render happened.
+    pageEl.classList.remove('page-flip-out-next', 'page-flip-out-prev', 'page-flip-in-next', 'page-flip-in-prev');
     if (direction === 'next' || direction === 'prev') {
       void pageEl.offsetWidth; // force reflow so the animation restarts on repeated navigation
-      pageEl.classList.add(direction === 'next' ? 'page-slide-next' : 'page-slide-prev');
+      pageEl.classList.add(direction === 'next' ? 'page-flip-in-next' : 'page-flip-in-prev');
     }
 
     // Scroll to target verse on load if requested
@@ -1417,86 +1446,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Tapping a verse in Lecture mode used to play its audio immediately,
-  // which made it impossible to just tap a verse to read its tafsir without
-  // triggering recitation. Now a tap opens a small popover to choose.
-  let activeVersePopover = null;
-
-  function closeVerseActionPopover() {
-    if (!activeVersePopover) return;
-    activeVersePopover.remove();
-    activeVersePopover = null;
-    document.removeEventListener('click', closeVerseActionPopover);
-    const mainEl = document.querySelector('main');
-    if (mainEl) mainEl.removeEventListener('scroll', closeVerseActionPopover);
-  }
-
-  function showVerseActionPopover(verseEl, globalNum) {
-    closeVerseActionPopover();
-
-    const popover = document.createElement('div');
-    popover.className = 'verse-action-popover';
-    popover.innerHTML = `
-      <button class="verse-popover-btn" data-action="listen">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        Écouter
-      </button>
-      <button class="verse-popover-btn" data-action="tafsir">
-        <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-        Tafsir
-      </button>
-    `;
-    document.body.appendChild(popover);
-
-    const rect = verseEl.getBoundingClientRect();
-    const popRect = popover.getBoundingClientRect();
-    let top = rect.top - popRect.height - 8;
-    if (top < 8) top = rect.bottom + 8; // flip below if there's no room above
-    let left = rect.left + rect.width / 2 - popRect.width / 2;
-    left = Math.max(8, Math.min(left, window.innerWidth - popRect.width - 8));
-    popover.style.top = `${top}px`;
-    popover.style.left = `${left}px`;
-
-    popover.querySelector('[data-action="listen"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      playVerse(globalNum);
-      saveReadingPosition(globalNum);
-      closeVerseActionPopover();
-    });
-    popover.querySelector('[data-action="tafsir"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      openTafsirDrawer(globalNum);
-      saveReadingPosition(globalNum);
-      closeVerseActionPopover();
-    });
-
-    activeVersePopover = popover;
-    // Deferred so the click that opened the popover doesn't also close it
-    // via bubbling to this same listener.
-    setTimeout(() => {
-      document.addEventListener('click', closeVerseActionPopover);
-      const mainEl = document.querySelector('main');
-      if (mainEl) mainEl.addEventListener('scroll', closeVerseActionPopover, { once: true });
-    }, 0);
-  }
-
   // Setup click interactions for rendered verses
   function setupVerseInteractions() {
     const targetParent = document.getElementById('quran-page') || quranContainer;
     if (!targetParent) return;
 
-    // Read-mode dense Mushaf page has no per-verse button row: tapping a
-    // verse's Arabic text opens a small "Écouter / Tafsir" choice instead of
-    // assuming which one the user wants, and its small ayah-end marker
-    // still jumps straight to tafsir as a shortcut.
-    targetParent.querySelectorAll('.mushaf-verse').forEach(verseEl => {
-      verseEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const num = parseInt(verseEl.dataset.verseNum, 10);
-        showVerseActionPopover(verseEl, num);
-      });
-    });
-
+    // Read-mode dense Mushaf page: tapping a verse's Arabic text no longer
+    // does anything of its own (it used to play audio, then later opened an
+    // Écouter/Tafsir popover) — it now just falls through to the page's own
+    // tap handler like tapping anywhere else (toggles immersive mode). The
+    // small ayah-end marker is still the way to open tafsir.
     targetParent.querySelectorAll('.ayah-marker').forEach(marker => {
       marker.addEventListener('click', (e) => {
         e.stopPropagation();

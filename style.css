@@ -747,12 +747,15 @@ main::-webkit-scrollbar {
 
 /* Single-page reader: no book/frame library — the page's height simply
    follows its content, and the reader's scrollable main area handles
-   anything taller than the viewport. Navigation replaces the content and
-   plays a short slide transition (see .page-slide-next/.page-slide-prev). */
+   anything taller than the viewport. Navigation plays a real page-turn:
+   the current page rotates away in 3D (.page-flip-out-*), then the new
+   content rotates in (.page-flip-in-*) — see goToNextPage/goToPrevPage
+   and renderQuranText() in app.js for the two-phase sequencing. */
 #reader-viewport {
   width: 100%;
   display: flex;
   justify-content: center;
+  perspective: 1600px;
 }
 
 .quran-page-sheet {
@@ -770,6 +773,8 @@ main::-webkit-scrollbar {
   box-sizing: border-box;
   color: var(--reading-text);
   min-height: 240px;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 .quran-page-sheet::before {
@@ -784,26 +789,51 @@ main::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* Page-turn transition: a brief slide + fade in the direction of travel,
-   matching the swipe/button gesture (right = next, left = previous). Pure
-   CSS, applied/removed via classList in renderQuranText() — no external
-   library, so there's nothing async to race or double-fire. */
-.page-slide-next {
-  animation: pageSlideNext 0.28s ease-out;
+/* Page-turn transition: a real book-style flip, not a slide. Two phases,
+   sequenced in JS (goToNextPage/goToPrevPage call the "out" phase and wait
+   for it before swapping content and rendering; renderQuranText() then
+   applies the matching "in" phase) — one element, no second DOM copy, no
+   external library. Next = the mushaf's right-to-left turn (outgoing page
+   hinges on its left edge like it's being turned past; incoming page
+   hinges on its right edge, swinging into place). Prev is the mirror. */
+.page-flip-out-next {
+  animation: pageFlipOutNext 0.2s ease-in forwards;
+  transform-origin: left center;
 }
 
-.page-slide-prev {
-  animation: pageSlidePrev 0.28s ease-out;
+.page-flip-in-next {
+  animation: pageFlipInNext 0.22s ease-out;
+  transform-origin: right center;
 }
 
-@keyframes pageSlideNext {
-  from { transform: translateX(24px); opacity: 0.4; }
-  to { transform: translateX(0); opacity: 1; }
+.page-flip-out-prev {
+  animation: pageFlipOutPrev 0.2s ease-in forwards;
+  transform-origin: right center;
 }
 
-@keyframes pageSlidePrev {
-  from { transform: translateX(-24px); opacity: 0.4; }
-  to { transform: translateX(0); opacity: 1; }
+.page-flip-in-prev {
+  animation: pageFlipInPrev 0.22s ease-out;
+  transform-origin: left center;
+}
+
+@keyframes pageFlipOutNext {
+  from { transform: rotateY(0deg); opacity: 1; }
+  to { transform: rotateY(-96deg); opacity: 0.25; }
+}
+
+@keyframes pageFlipInNext {
+  from { transform: rotateY(96deg); opacity: 0.25; }
+  to { transform: rotateY(0deg); opacity: 1; }
+}
+
+@keyframes pageFlipOutPrev {
+  from { transform: rotateY(0deg); opacity: 1; }
+  to { transform: rotateY(96deg); opacity: 0.25; }
+}
+
+@keyframes pageFlipInPrev {
+  from { transform: rotateY(-96deg); opacity: 0.25; }
+  to { transform: rotateY(0deg); opacity: 1; }
 }
 
 .verse-block {
@@ -862,57 +892,6 @@ main::-webkit-scrollbar {
   width: 16px;
   height: 16px;
   fill: currentColor;
-}
-
-/* Lecture-mode verse tap popover: "Écouter" vs "Tafsir" choice, positioned
-   in JS via fixed top/left next to the tapped verse. Uses the app's regular
-   UI colors (not --reading-*), since it floats above the reading page. */
-.verse-action-popover {
-  position: fixed;
-  z-index: 200;
-  display: flex;
-  gap: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 14px;
-  padding: 6px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  animation: versePopoverIn 0.15s ease-out;
-}
-
-@keyframes versePopoverIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.verse-popover-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-  white-space: nowrap;
-}
-
-.verse-popover-btn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
-.verse-popover-btn:hover,
-.verse-popover-btn:active {
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--primary);
 }
 
 .verse-text-ar {
