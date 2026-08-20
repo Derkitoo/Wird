@@ -897,75 +897,6 @@ main::-webkit-scrollbar {
   100% { filter: blur(0px); opacity: 1; transform: translateX(0) scale(1); }
 }
 
-.verse-block {
-  padding: 18px 2px;
-  border-bottom: 1px solid var(--reading-rule);
-  transition: var(--transition-smooth);
-  position: relative;
-}
-
-.verse-block:last-child {
-  border-bottom: none;
-}
-
-.verse-block.active-reciting {
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  border-radius: var(--radius-md);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
-.verse-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.verse-badge {
-  background: color-mix(in srgb, var(--reading-text) 6%, transparent);
-  font-size: 0.625rem;
-  color: var(--reading-text-secondary);
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-
-.verse-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.verse-action-btn {
-  background: none;
-  border: none;
-  color: var(--reading-text-muted);
-  cursor: pointer;
-  transition: var(--transition-smooth);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.verse-action-btn:hover {
-  color: var(--primary);
-}
-
-.verse-action-btn svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-}
-
-.verse-text-ar {
-  font-family: var(--font-quran);
-  font-size: 1.6875rem;
-  line-height: 2.25;
-  text-align: right;
-  direction: rtl;
-  color: var(--reading-text);
-  margin-bottom: 8px;
-  user-select: none;
-}
-
 /* Dense, continuous Mushaf-style page (Lecture mode) — plain flowing
    Arabic text instead of a card per verse, closed by
    a small tappable ayah-end marker instead of a full action-button row, so
@@ -1044,43 +975,6 @@ main::-webkit-scrollbar {
 .ayah-marker:active {
   background: var(--primary);
   color: #070913;
-}
-
-/* Interactive Hide/Show styling in memorization */
-.quran-word-interactive {
-  display: inline-block;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-  position: relative;
-  border-bottom: 1px dashed color-mix(in srgb, var(--reading-text) 12%, transparent);
-  padding: 0 2px;
-}
-
-.quran-word-interactive.hidden-word {
-  background: var(--primary-glow);
-  color: transparent !important;
-  border-radius: var(--radius-sm);
-  border-bottom: none;
-  animation: pulseHidden 2s infinite ease-in-out;
-}
-
-@keyframes pulseHidden {
-  0% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
-  50% { background-color: color-mix(in srgb, var(--primary) 35%, transparent); }
-  100% { background-color: color-mix(in srgb, var(--primary) 20%, transparent); }
-}
-
-.verse-text-trans {
-  font-size: 0.6875rem;
-  color: var(--reading-text-muted);
-  line-height: 1.4;
-  margin-bottom: 4px;
-}
-
-.verse-text-fr {
-  font-size: 0.8125rem;
-  color: var(--reading-text-secondary);
-  line-height: 1.5;
 }
 
 /* Tafsir Side Drawer (Bottom sheet sliding up) */
@@ -1199,111 +1093,6 @@ main::-webkit-scrollbar {
   color: var(--emerald);
   display: block;
   margin-bottom: 4px;
-}
-
-/* Audio Player Persistent Floating Widget */
-.audio-player-widget {
-  position: absolute;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  left: 16px;
-  right: 16px;
-  background: rgba(13, 17, 30, 0.97);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-card));
-  border-radius: 999px;
-  padding: 8px 10px 8px 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px color-mix(in srgb, var(--primary) 8%, transparent);
-  z-index: 45;
-  animation: slideUp 0.3s ease-out forwards;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.audio-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.reciter-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--primary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #070913;
-  font-weight: 700;
-  font-size: 0.8125rem;
-}
-
-.audio-text {
-  display: flex;
-  flex-direction: column;
-}
-
-/* .audio-player-widget keeps a fixed dark background in every theme, so its
-   text uses fixed light colors too — see the .tafsir-drawer note above for
-   why theme variables break here (they flip to near-black in light/sepia). */
-.audio-title {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.audio-subtitle {
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.audio-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.audio-control-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.audio-control-btn:hover {
-  color: var(--primary);
-}
-
-.audio-control-btn.play-btn {
-  width: 32px;
-  height: 32px;
-  background: var(--primary);
-  color: #070913;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.audio-control-btn.play-btn svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
-}
-
-.audio-control-btn svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
 }
 
 /* Memorization Interface Custom Styles */
@@ -1496,32 +1285,6 @@ main::-webkit-scrollbar {
   opacity: 1;
 }
 
-/* Responsive Font size controls in top control bar */
-.text-size-controls {
-  display: flex;
-  gap: 4px;
-}
-
-.btn-text-size {
-  width: 23px;
-  height: 23px;
-  background: color-mix(in srgb, var(--text-strong) 5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--text-strong) 8%, transparent);
-  border-radius: 50%;
-  color: var(--text-primary);
-  font-size: 0.625rem;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: var(--transition-smooth);
-}
-
-.btn-text-size:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -1671,7 +1434,7 @@ main::-webkit-scrollbar {
 }
 
 /* .push-toast keeps a fixed dark background in every theme — same reasoning
-   as .tafsir-drawer / .audio-player-widget above, fixed light text here too. */
+   as .tafsir-drawer above, fixed light text here too. */
 .push-toast-title {
   font-size: 0.75rem;
   font-weight: 700;
@@ -1690,40 +1453,6 @@ main::-webkit-scrollbar {
 
 @keyframes toastFadeOut {
   to { opacity: 0; transform: translateY(-10px); }
-}
-
-/* Voice Recitation Feedback Classes */
-.mic-pulse {
-  animation: pulseMic 1.2s infinite ease-in-out;
-}
-
-@keyframes pulseMic {
-  0% { transform: scale(0.95); opacity: 0.6; }
-  50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
-  100% { transform: scale(0.95); opacity: 0.6; }
-}
-
-.verse-block.recitation-success {
-  border-color: var(--emerald) !important;
-  background: rgba(16, 185, 129, 0.04);
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.08);
-}
-
-.verse-block.recitation-error {
-  border-color: var(--ruby) !important;
-  background: rgba(239, 68, 68, 0.04);
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.08);
-}
-
-.verse-action-btn.listening-active {
-  color: var(--ruby) !important;
-  animation: pulseMicIcon 1.2s infinite ease-in-out;
-}
-
-@keyframes pulseMicIcon {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.25); }
-  100% { transform: scale(1); }
 }
 
 /* Hifz Gamification — stats bar (streak + level/XP) */

@@ -515,99 +515,15 @@
 
       <!-- ================= VIEW 2: READER (LECTURE) ================= -->
       <section id="view-reader" class="view">
-        <!-- Minimal top bar: title + a chevron that reveals every other
-             control below. Mirrors the reference reader app — just the page
-             on screen by default, secondary controls tucked away on demand. -->
+        <!-- Simplified reader: just the title, the page, and page navigation
+             — no mode switch, no font/audio/Juz controls, no flashcards.
+             The reader's only job is displaying the current Juz's text;
+             everything else (which Juz, memorization, audio) lives
+             elsewhere in the app now. -->
         <div class="reader-controls-top">
           <div class="surah-info-title">
             <h2 id="reader-surah-title">An-Naba</h2>
             <p id="reader-juz-title">Sourate 78 • Juz 30</p>
-          </div>
-          <button id="btn-toggle-reader-controls" class="btn-reader-controls-toggle" title="Options d'affichage" aria-expanded="false">
-            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-          </button>
-        </div>
-
-        <!-- Everything below is hidden by default and only shown while the
-             chevron above is expanded. -->
-        <div id="reader-extra-controls" style="display:none;">
-          <div class="reader-extra-controls-row">
-            <div class="text-size-controls">
-              <button id="btn-font-dec" class="btn-text-size" title="Diminuer la police">A-</button>
-              <button id="btn-font-inc" class="btn-text-size" title="Agrandir la police">A+</button>
-            </div>
-            <div class="mode-switches">
-              <button id="switch-read" class="switch-btn active">Lecture</button>
-              <button id="switch-memorize" class="switch-btn">Mémoriser</button>
-            </div>
-          </div>
-
-          <!-- Display Toggles (Translation & Phonetics) — only meaningful in
-               Mémoriser mode; Lecture mode's dense Mushaf page doesn't show
-               inline translation/phonetic text for these to control. -->
-          <div id="display-toggles-card" class="glass-card" style="display:none; margin: 0 0 4px 0; padding: 5px 12px; justify-content: space-around; font-size: 0.625rem; gap:8px;">
-            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-              <input type="checkbox" id="toggle-show-ar" checked style="accent-color: var(--primary);"> Arabe
-            </label>
-            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-              <input type="checkbox" id="toggle-show-fr" checked style="accent-color: var(--primary);"> Traduction (FR)
-            </label>
-            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; color:#FFF; font-weight:600; user-select:none;">
-              <input type="checkbox" id="toggle-show-trans" checked style="accent-color: var(--primary);"> Phonétique
-            </label>
-          </div>
-
-          <!-- Dropdowns for Juz and Reciter selections -->
-          <div class="reader-selectors-bar" style="display: flex; gap: 6px; margin-bottom: 4px;">
-            <select id="select-juz" style="flex: 1; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
-              <!-- Populated via JS -->
-            </select>
-            <select id="select-reciter" style="flex: 1.5; background: rgba(10, 14, 26, 0.6); border: 1px solid var(--border-card); color: #FFF; padding: 4px 8px; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 0.6875rem; outline: none; cursor: pointer;">
-              <!-- Populated via JS -->
-            </select>
-          </div>
-
-          <!-- Audio Offline Cache Manager -->
-          <div class="glass-card" style="margin-bottom: 4px; padding: 5px 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-            <span style="font-size: 0.625rem; color: var(--text-secondary); line-height: 1.3;">
-              <span id="audio-download-status" style="color: #FFF; font-weight:600;">Audio non stocké hors-ligne</span>
-              <span style="color: var(--text-muted);"> · </span>
-              <span id="audio-download-detail" style="color: var(--text-muted);">Téléchargez pour écouter sans internet</span>
-            </span>
-            <button id="btn-audio-download" class="btn-action-small" style="background: rgba(212,175,55,0.08); border: 1px solid var(--primary); color: var(--primary); padding: 4px 10px; font-size: 0.625rem; border-radius:var(--radius-sm); font-weight:700; width:auto; justify-content:center; flex-shrink:0;">
-              📥 Télécharger
-            </button>
-          </div>
-          <!-- Progress bar for audio download -->
-          <div id="audio-download-progress-container" style="display: none; width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 6px; overflow:hidden;">
-            <div id="audio-download-progress-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s;"></div>
-          </div>
-
-          <!-- Memorization (Hifz) Assistance toolbar -->
-          <div id="hifz-toolbar" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 6px; background: rgba(20, 26, 46, 0.4); border: 1px solid var(--border-card); padding: 8px 10px; border-radius: var(--radius-md);">
-            <div class="hifz-mini-stats">
-              <span class="hifz-mini-stat">🔥 <span class="hifz-streak-value">0</span> j</span>
-              <span class="hifz-mini-stat">⭐ Niv. <span class="hifz-level-value">1</span></span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-              <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600; white-space: nowrap;">Niveau d'aide :</span>
-              <div class="hifz-modes" style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
-                <button class="switch-btn active" data-hifz-level="auto" title="S'adapte à ce que vous maîtrisez déjà" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">🎯 Auto</button>
-                <button class="switch-btn" data-hifz-level="1" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Complet</button>
-                <button class="switch-btn" data-hifz-level="2" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">1er Mot</button>
-                <button class="switch-btn" data-hifz-level="3" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Troué</button>
-                <button class="switch-btn" data-hifz-level="4" style="padding: 3px 7px; font-size: 0.5625rem; border-radius:12px;">Masqué</button>
-              </div>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
-              <span style="font-size: 0.625rem; color: var(--text-secondary); font-weight:600;">Répétition audio :</span>
-              <select id="select-audio-loop" style="background: rgba(10, 14, 26, 0.8); border: 1px solid var(--border-card); color: #FFF; padding: 3px 6px; border-radius: var(--radius-sm); font-size: 0.625rem; outline: none; cursor: pointer;">
-                <option value="1">1x (Normal)</option>
-                <option value="3">3x en boucle</option>
-                <option value="5">5x en boucle</option>
-                <option value="infinite">En boucle infinie</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -790,59 +706,6 @@
       </section>
 
     </main>
-
-    <!-- Floating Persistent Audio Player Widget -->
-    <div id="audio-widget" class="audio-player-widget" style="display: none;">
-      <div class="audio-info">
-        <div class="reciter-avatar">M</div>
-        <div class="audio-text">
-          <span id="audio-verse-title" class="audio-title">Sourate An-Naba • Verset 1</span>
-          <span class="audio-subtitle">Récitateur : Minshawi (Murattal)</span>
-        </div>
-      </div>
-      <div class="audio-controls">
-        <!-- Progress mini bar container inside control -->
-        <div style="width: 60px; height: 4px; background: rgba(255,255,255,0.1); border-radius:2px; position:relative; overflow:hidden;">
-          <div id="audio-progress-bar" style="width: 0%; height:100%; background: var(--primary); transition: width 0.3s;"></div>
-        </div>
-        
-        <button id="audio-play-btn" class="audio-control-btn play-btn">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button id="audio-close-btn" class="audio-control-btn" title="Fermer le lecteur">
-          <svg viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Speech Recording overlay status -->
-    <div id="speech-modal" style="display: none; position: absolute; bottom: 85px; left: 20px; right: 20px; background: rgba(13, 17, 30, 0.98); border: 1.5px solid var(--border-active); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-lg); z-index: 60; flex-direction: column; gap: 12px; animation: slideUp 0.3s ease-out;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.8125rem; font-weight: 700; color: #FFF; display: flex; align-items: center; gap: 8px;">
-          <span class="mic-pulse" style="width: 10px; height: 10px; background: var(--ruby); border-radius: 50%;"></span>
-          Récitation à voix haute...
-        </span>
-        <button id="btn-speech-close" style="background: none; border: none; color: var(--text-secondary); font-size: 1.125rem; cursor: pointer; line-height:1;">&times;</button>
-      </div>
-      <div id="speech-transcription" style="font-family: var(--font-quran); font-size: 1.125rem; text-align: right; direction: rtl; color: var(--text-secondary); min-height: 40px; padding: 10px; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); line-height:1.6;">
-        (Parlez maintenant...)
-      </div>
-      <!-- Shown only when SpeechRecognition is unsupported or the mic permission is denied — a real fallback, not a dev shortcut. -->
-      <div id="speech-fallback-row" style="display: none; flex-direction: column; gap: 8px;">
-        <p id="speech-fallback-msg" style="font-size: 0.625rem; color: var(--text-muted); margin: 0;">Micro indisponible sur cet appareil.</p>
-        <div style="display: flex; gap: 8px;">
-          <button id="btn-speech-fallback-known" class="btn-action-small" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--emerald); color: var(--emerald); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
-            Je le connais ✅
-          </button>
-          <button id="btn-speech-fallback-unsure" class="btn-action-small" style="flex: 1; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--ruby); color: var(--ruby); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; font-weight:600; justify-content:center;">
-            À revoir ⚠️
-          </button>
-        </div>
-      </div>
-      <button id="btn-speech-stop" class="btn-action-small" style="width:100%; background: rgba(255, 255, 255, 0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 0; cursor: pointer; font-size: 0.6875rem; justify-content:center; margin-top: 4px;">
-        Annuler
-      </button>
-    </div>
 
     <!-- Hifz Flashcard Overlay Modal -->
     <div id="hifz-flashcard-modal" class="tafsir-drawer" style="max-height: 85%; z-index: 110;">
@@ -1044,8 +907,6 @@
 
 
   </div>
-
-  <audio id="native-audio-player" style="display: none;"></audio>
 
   <!-- Include Core Data & Application scripts -->
   <script src="quranData.js"></script>

@@ -144,23 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const quranContainer = document.getElementById('quran-page');
   const readerSurahTitle = document.getElementById('reader-surah-title');
   const readerJuzTitle = document.getElementById('reader-juz-title');
-  const btnToggleReaderControls = document.getElementById('btn-toggle-reader-controls');
-  const readerExtraControls = document.getElementById('reader-extra-controls');
   const readerControlsTop = document.querySelector('.reader-controls-top');
   const readerPagePagination = document.getElementById('reader-page-pagination');
   const bottomNavEl = document.querySelector('.bottom-nav');
 
-  // Native Audio HTML5 Player
-  const nativeAudioPlayer = document.getElementById('native-audio-player');
-  const audioWidget = document.getElementById('audio-widget');
-  const audioPlayBtn = document.getElementById('audio-play-btn');
-  const audioVerseTitle = document.getElementById('audio-verse-title');
-  const audioProgressBar = document.getElementById('audio-progress-bar');
-
-  // Reader Hifz progressive help (Reader view only)
-  const hifzToolbar = document.getElementById('hifz-toolbar');
-  const selectAudioLoop = document.getElementById('select-audio-loop');
-  
   // SRS Dashboard card
   const srsRevisionsCard = document.getElementById('srs-revisions-card');
   const srsRevisionsCountText = document.getElementById('srs-revisions-count');
@@ -171,16 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCirclePost = document.getElementById('btn-circle-post');
   const circleActivityList = document.querySelector('.circle-activity-list');
   const toastContainer = document.getElementById('toast-container');
-
-  // Reader Voice Speech elements
-  const speechModal = document.getElementById('speech-modal');
-  const speechTranscription = document.getElementById('speech-transcription');
-  const btnSpeechClose = document.getElementById('btn-speech-close');
-  const btnSpeechStop = document.getElementById('btn-speech-stop');
-  const speechFallbackRow = document.getElementById('speech-fallback-row');
-  const speechFallbackMsg = document.getElementById('speech-fallback-msg');
-  const btnSpeechFallbackKnown = document.getElementById('btn-speech-fallback-known');
-  const btnSpeechFallbackUnsure = document.getElementById('btn-speech-fallback-unsure');
 
   // Hifz Refactored Workshop elements (view-memorize)
   const hifzJuzBadge = document.getElementById('hifz-juz-badge');
@@ -225,11 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isha: document.getElementById('slider-isha')
   };
 
-  const btnAudioDownload = document.getElementById('btn-audio-download');
-  const audioDownloadStatus = document.getElementById('audio-download-status');
-  const audioDownloadDetail = document.getElementById('audio-download-detail');
-  const audioDownloadProgressContainer = document.getElementById('audio-download-progress-container');
-  const audioDownloadProgressBar = document.getElementById('audio-download-progress-bar');
 
   const heatmapGrid = document.getElementById('heatmap-grid');
 
@@ -267,11 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
     activeDays: document.getElementById('stat-active-days-value'),
     avgPerDay: document.getElementById('stat-avg-value')
   };
-
-  // Language & display checkbox switches
-  const toggleShowAr = document.getElementById('toggle-show-ar');
-  const toggleShowFr = document.getElementById('toggle-show-fr');
-  const toggleShowTrans = document.getElementById('toggle-show-trans');
 
   // Pagination buttons
   const btnPrevPage = document.getElementById('btn-prev-page');
@@ -387,76 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize selectors & views
   function initSelectors() {
-    if (!selectJuz || !selectReciter) return;
-
-    // Populate 30 Juz
-    selectJuz.innerHTML = '';
-    for (let i = 1; i <= 30; i++) {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = `Juz ${i}`;
-      if (i === state.selectedJuz) opt.selected = true;
-      selectJuz.appendChild(opt);
-    }
-
-    // Populate Reciters
-    selectReciter.innerHTML = '';
-    window.QuranAPI.getReciters().forEach(reciter => {
-      const opt = document.createElement('option');
-      opt.value = reciter.id;
-      opt.textContent = `${reciter.name} (${reciter.style})`;
-      if (reciter.id === state.selectedReciter) opt.selected = true;
-      selectReciter.appendChild(opt);
-    });
-
-    // Dropdown change listeners
-    selectJuz.addEventListener('change', (e) => {
-      state.selectedJuz = parseInt(e.target.value, 10);
-      localStorage.setItem('wird_selected_juz', state.selectedJuz);
-      // Reset page index on Juz switch
-      state.currentPageIndex = 0;
-      localStorage.removeItem('wird_last_page');
-      stopAudio();
-      
-      if (state.currentView === 'memorize') {
-        loadHifzDashboard();
-      } else {
-        loadJuzData();
-      }
-    });
-
-    selectReciter.addEventListener('change', (e) => {
-      state.selectedReciter = e.target.value;
-      localStorage.setItem('wird_selected_reciter', state.selectedReciter);
-      stopAudio();
-      
-      if (state.currentView === 'memorize') {
-        loadHifzDashboard();
-      } else {
-        loadJuzData();
-      }
-    });
-
-    // Hifz levels click listeners (Reader view only) — "Auto" adapts each
-    // verse's masking to its own SRS status instead of one level applied to
-    // every verse on the page (see computeAutoHifzLevel).
-    document.querySelectorAll('#hifz-toolbar [data-hifz-level]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#hifz-toolbar [data-hifz-level]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const level = btn.dataset.hifzLevel;
-        state.hifzLevel = level === 'auto' ? 'auto' : parseInt(level, 10);
-        renderQuranText();
-      });
-    });
-
-    // Audio loop change listener
-    if (selectAudioLoop) {
-      selectAudioLoop.addEventListener('change', (e) => {
-        state.audioLoopRepetitions = e.target.value;
-        state.audioPlayCount = 1;
-      });
-    }
 
     // SRS dashboard/workshop "start review session" buttons — both just
     // kick off the same guided, cross-Juz review queue.
@@ -468,24 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
       btnCirclePost.addEventListener('click', postStatusToCircle);
       inputCirclePost.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') postStatusToCircle();
-      });
-    }
-
-    // Reader Speech UI control bindings
-    if (btnSpeechClose) btnSpeechClose.addEventListener('click', cancelSpeechRecording);
-    if (btnSpeechStop) btnSpeechStop.addEventListener('click', cancelSpeechRecording);
-
-    // Manual fallback — only ever shown when SpeechRecognition is unsupported
-    // or the mic permission was denied (see startSpeechRecording).
-    if (btnSpeechFallbackKnown) {
-      btnSpeechFallbackKnown.addEventListener('click', () => {
-        const verse = getActiveRecordingVerse();
-        if (verse) evaluateSpeechResult(verse.textAr);
-      });
-    }
-    if (btnSpeechFallbackUnsure) {
-      btnSpeechFallbackUnsure.addEventListener('click', () => {
-        evaluateSpeechResult('');
       });
     }
 
@@ -577,11 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Audio downloader binding
-    if (btnAudioDownload) {
-      btnAudioDownload.addEventListener('click', downloadJuzAudioCache);
-    }
-
     // Resume reading click handler
     if (btnResumeReading) {
       btnResumeReading.addEventListener('click', () => {
@@ -633,25 +507,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast("Juz Suivant ! 🏁", `Bienvenue dans le Juz ${state.selectedJuz}.`);
 
         updateProgress();
-        stopAudio();
         switchView('reader');
       });
     }
-
-    // Language display check toggles
-    if (toggleShowAr) toggleShowAr.addEventListener('change', refreshDisplayLanguages);
-    if (toggleShowFr) toggleShowFr.addEventListener('change', refreshDisplayLanguages);
-    if (toggleShowTrans) toggleShowTrans.addEventListener('change', refreshDisplayLanguages);
-
-    // Initial load configurations
-    const savedShowAr = localStorage.getItem('wird_show_ar');
-    if (savedShowAr && toggleShowAr) toggleShowAr.checked = (savedShowAr === 'true');
-
-    const savedShowFr = localStorage.getItem('wird_show_fr');
-    if (savedShowFr && toggleShowFr) toggleShowFr.checked = (savedShowFr === 'true');
-
-    const savedShowTrans = localStorage.getItem('wird_show_trans');
-    if (savedShowTrans && toggleShowTrans) toggleShowTrans.checked = (savedShowTrans === 'true');
 
     // Pagination buttons event bindings
     if (btnPrevPage) {
@@ -701,22 +559,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // playing) follows suit. Only the ayah-end marker (tafsir) and
       // Mémoriser mode's per-verse buttons keep their own tap action.
       pageEl.addEventListener('click', (e) => {
-        const isInteractive = e.target.closest('.ayah-marker, .verse-block, .verse-action-btn, .hifz-masked-word, .hifz-masked-full-wrapper, .btn-srs');
+        const isInteractive = e.target.closest('.ayah-marker');
         if (isInteractive) return;
         toggleReaderImmersive();
-      });
-    }
-
-    // Chevron toggles every secondary reader control (text size, mode,
-    // Juz/reciter, audio download, Hifz toolbar) — collapsed by default.
-    if (btnToggleReaderControls && readerExtraControls) {
-      btnToggleReaderControls.addEventListener('click', () => {
-        const isOpen = readerExtraControls.style.display !== 'none';
-        readerExtraControls.style.display = isOpen ? 'none' : 'block';
-        btnToggleReaderControls.setAttribute('aria-expanded', String(!isOpen));
-        // Expanding/collapsing changes how much vertical space the page
-        // itself has available, so re-fit it to the new height.
-        fitReaderPageToViewport();
       });
     }
   }
@@ -798,7 +643,6 @@ document.addEventListener('DOMContentLoaded', () => {
       state.currentPageIndex--;
       localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
       localStorage.setItem('wird_last_juz', state.selectedJuz);
-      stopAudio();
       renderQuranText(true, 'prev');
     });
   }
@@ -810,7 +654,6 @@ document.addEventListener('DOMContentLoaded', () => {
       state.currentPageIndex++;
       localStorage.setItem('wird_last_page', state.pagesList[state.currentPageIndex]);
       localStorage.setItem('wird_last_juz', state.selectedJuz);
-      stopAudio();
       renderQuranText(true, 'next');
     });
   }
@@ -850,103 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-  }
-
-  // Check if all MP3 audio URLs for the active Juz are available in Cache Storage
-  async function checkJuzAudioCacheStatus() {
-    if (!state.juzData || !btnAudioDownload || !audioDownloadStatus || !audioDownloadDetail) return;
-    
-    try {
-      const cache = await caches.open('wird-audio-cache');
-      let allCached = true;
-      let count = 0;
-      let totalCount = 0;
-
-      state.juzData.surahs.forEach(s => {
-        s.verses.forEach(v => {
-          totalCount++;
-        });
-      });
-
-      for (const s of state.juzData.surahs) {
-        for (const v of s.verses) {
-          const match = await cache.match(v.audio);
-          if (match) {
-            count++;
-          } else {
-            allCached = false;
-          }
-        }
-      }
-
-      if (allCached && totalCount > 0) {
-        audioDownloadStatus.textContent = "Audio disponible hors-ligne";
-        audioDownloadStatus.style.color = 'var(--emerald)';
-        audioDownloadDetail.textContent = `Tous les ${totalCount} fichiers MP3 sont stockés localement`;
-        btnAudioDownload.innerHTML = '✅ Stocké';
-        btnAudioDownload.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-        btnAudioDownload.style.color = 'var(--emerald)';
-        btnAudioDownload.style.background = 'rgba(16, 185, 129, 0.05)';
-        btnAudioDownload.disabled = true;
-      } else {
-        audioDownloadStatus.textContent = "Audio non stocké hors-ligne";
-        audioDownloadStatus.style.color = '#FFF';
-        audioDownloadDetail.textContent = `${count} / ${totalCount} fichiers MP3 en cache local`;
-        btnAudioDownload.innerHTML = '📥 Télécharger';
-        btnAudioDownload.style.borderColor = 'var(--primary)';
-        btnAudioDownload.style.color = 'var(--primary)';
-        btnAudioDownload.style.background = 'rgba(212, 175, 55, 0.08)';
-        btnAudioDownload.disabled = false;
-      }
-    } catch (e) {
-      console.warn("Could not check Cache Storage status", e);
-    }
-  }
-
-  // Sequence download MP3 tracks into the 'wird-audio-cache' storage
-  async function downloadJuzAudioCache() {
-    if (!state.juzData || state.isAudioDownloading) return;
-    
-    state.isAudioDownloading = true;
-    btnAudioDownload.disabled = true;
-    audioDownloadProgressContainer.style.display = 'block';
-    audioDownloadProgressBar.style.width = '0%';
-
-    const cache = await caches.open('wird-audio-cache');
-    const audioUrls = [];
-    state.juzData.surahs.forEach(s => {
-      s.verses.forEach(v => {
-        audioUrls.push(v.audio);
-      });
-    });
-
-    let completed = 0;
-    audioDownloadStatus.textContent = "Téléchargement en cours...";
-    audioDownloadStatus.style.color = 'var(--primary)';
-
-    for (const url of audioUrls) {
-      try {
-        const match = await cache.match(url);
-        if (!match) {
-          const res = await fetch(url);
-          if (res.ok) {
-            await cache.put(url, res);
-          }
-        }
-      } catch (err) {
-        console.error("Error storing audio URL", url, err);
-      }
-      completed++;
-      const pct = Math.round((completed / audioUrls.length) * 100);
-      audioDownloadProgressBar.style.width = `${pct}%`;
-      audioDownloadDetail.textContent = `${completed} / ${audioUrls.length} fichiers MP3 récupérés (${pct}%)`;
-    }
-
-    state.isAudioDownloading = false;
-    audioDownloadProgressContainer.style.display = 'none';
-    
-    await checkJuzAudioCacheStatus();
-    showToast("Téléchargement fini ! 📥", "Ce Juz est maintenant disponible hors-ligne.");
   }
 
   // Load and populate Consistency Heatmap History (28 days)
@@ -1032,27 +778,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return allVerses.filter(item => item.verse.page === activePageNum);
   }
 
-  // Toggle visible elements based on persistent settings
-  function refreshDisplayLanguages() {
-    const showAr = toggleShowAr ? toggleShowAr.checked : true;
-    const showFr = toggleShowFr ? toggleShowFr.checked : true;
-    const showTrans = toggleShowTrans ? toggleShowTrans.checked : true;
-
-    localStorage.setItem('wird_show_ar', showAr);
-    localStorage.setItem('wird_show_fr', showFr);
-    localStorage.setItem('wird_show_trans', showTrans);
-
-    document.querySelectorAll('.verse-text-ar-container').forEach(el => {
-      el.style.display = showAr ? 'block' : 'none';
-    });
-    document.querySelectorAll('.verse-text-fr').forEach(el => {
-      el.style.display = showFr ? 'block' : 'none';
-    });
-    document.querySelectorAll('.verse-text-trans').forEach(el => {
-      el.style.display = showTrans ? 'block' : 'none';
-    });
-  }
-
   // Load dynamic Juz data (for Reader view)
   async function loadJuzData() {
     if (!quranContainer || !readerLoader) return;
@@ -1084,7 +809,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // its unshrunk default size until some later action re-triggers a fit.
       readerLoader.style.display = 'none';
       renderQuranText();
-      await checkJuzAudioCacheStatus();
 
     } catch (err) {
       console.error("Failed to fetch Quran data, loading fallback Juz 30...", err);
@@ -1113,7 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
     readerJuzTitle.textContent = `Juz 30 (Hors-ligne)`;
     readerLoader.style.display = 'none'; // see loadJuzData(): must hide before rendering, not after
     renderQuranText();
-    checkJuzAudioCacheStatus();
   }
 
   // Exact Uthmani text of the Bismillah as returned by the API (alquran.cloud,
@@ -1125,9 +848,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const BISMILLAH_AR = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'.normalize('NFC');
 
   // Fullscreen immersive toggle: hides/shows the reader's top bar,
-  // pagination, options panel, bottom nav and floating audio bar together —
-  // a single tap on the page cycles between "just the page" and "everything,
-  // including the options panel" (see the #quran-page click listener above).
+  // pagination and bottom nav together — a single tap on the page cycles
+  // between "just the page" and "everything" (see the #quran-page click
+  // listener above).
   function toggleReaderImmersive(forceState) {
     const nextImmersive = typeof forceState === 'boolean' ? forceState : !state.readerImmersive;
     state.readerImmersive = nextImmersive;
@@ -1135,15 +858,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (readerControlsTop) readerControlsTop.style.display = nextImmersive ? 'none' : 'flex';
     if (readerPagePagination) readerPagePagination.style.display = nextImmersive ? 'none' : 'flex';
     if (bottomNavEl) bottomNavEl.style.display = nextImmersive ? 'none' : 'flex';
-
-    if (readerExtraControls && btnToggleReaderControls) {
-      readerExtraControls.style.display = nextImmersive ? 'none' : 'block';
-      btnToggleReaderControls.setAttribute('aria-expanded', String(!nextImmersive));
-    }
-
-    if (audioWidget && state.currentPlayingVerseNum) {
-      audioWidget.style.display = nextImmersive ? 'none' : 'flex';
-    }
 
     // main's bottom padding permanently reserves room for the floating nav
     // (see .bottom-nav in style.css); with the nav hidden in immersive mode
@@ -1296,165 +1010,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const activePageNum = pages[state.currentPageIndex];
     const pageItems = allVerses.filter(item => item.verse.page === activePageNum);
 
-    {
-      if (state.readerMode === 'memorize') {
-        // Memorize mode keeps the per-verse card layout: word-masking and
-        // SRS rating both need a distinct, individually-interactive block
-        // per verse, so it isn't rendered as a dense continuous page.
-        let activeSurahHeaderNum = null;
+    // A dense, continuous Mushaf-style page — just the Arabic text flowing
+    // per surah, each verse closed by a small tappable ayah-end marker
+    // (opens the tafsir drawer). This is the reader's only rendering mode:
+    // it's what lets a whole page's worth of verses (can be 20-30+ short
+    // verses on a single real Mushaf page) fit in the frame at all.
+    let activeSurahHeaderNum = null;
+    let currentFlow = null;
 
-        pageItems.forEach(item => {
-          const v = item.verse;
-          const surah = item.surah;
+    pageItems.forEach(item => {
+      const v = item.verse;
+      const surah = item.surah;
+      // The API glues the Bismillah directly onto ayah 1's text with no
+      // separator ("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ عَمَّ يَتَسَآءَلُونَ" as a single
+      // string) for every surah except Al-Fatiha — whose ayah 1 *is* the
+      // Bismillah — and At-Tawbah, which traditionally has none.
+      const normalizedText = v.textAr.normalize('NFC');
+      const hasGluedBismillah = v.numberInSurah === 1 && surah.number !== 1 && surah.number !== 9
+        && normalizedText.startsWith(BISMILLAH_AR);
 
-          if (activeSurahHeaderNum !== surah.number) {
-            activeSurahHeaderNum = surah.number;
+      if (activeSurahHeaderNum !== surah.number) {
+        activeSurahHeaderNum = surah.number;
 
-            const headerCard = document.createElement('div');
-            headerCard.className = 'glass-card';
-            headerCard.style.padding = '12px 16px';
-            headerCard.style.marginBottom = '14px';
-            headerCard.style.textAlign = 'center';
-            headerCard.style.borderLeft = '2px solid var(--primary)';
-            headerCard.innerHTML = `
-              <div style="font-size: 0.625rem; text-transform:uppercase; color:var(--primary); font-weight:600; margin-bottom:4px;">Sourate ${surah.number}</div>
-              <div style="font-size: 1rem; font-weight: 700; color:#FFF; margin-bottom: 2px;">${surah.nameFr}</div>
-              <div style="font-size: 0.6875rem; color:var(--text-secondary);">${surah.translationName} • <span style="font-family:var(--font-quran); color:var(--primary); font-size: 0.875rem;">${surah.nameAr}</span></div>
-            `;
-            pageEl.appendChild(headerCard);
-          }
+        const header = document.createElement('div');
+        header.className = 'mushaf-surah-header';
+        header.textContent = `${surah.nameFr} • ${surah.nameAr}`;
+        pageEl.appendChild(header);
 
-          const block = document.createElement('div');
-          block.className = 'verse-block';
-          block.id = `verse-${v.number}`;
-          block.dataset.verseNum = v.number;
-          block.dataset.surahNum = surah.number;
-          block.dataset.audioUrl = v.audio;
+        if (hasGluedBismillah) {
+          const bismillahLine = document.createElement('div');
+          bismillahLine.className = 'mushaf-bismillah';
+          bismillahLine.dir = 'rtl';
+          bismillahLine.textContent = BISMILLAH_AR;
+          pageEl.appendChild(bismillahLine);
+        }
 
-          const verseKey = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
-          const effectiveLevel = state.hifzLevel === 'auto' ? computeAutoHifzLevel(verseKey) : state.hifzLevel;
-
-          let arabicHtml = '';
-          const words = v.textAr.split(/\s+/);
-
-          if (effectiveLevel === 1) {
-            arabicHtml = v.textAr;
-          } else if (effectiveLevel === 2) {
-            arabicHtml = words.map((w, idx) => {
-              if (idx === 0) return w;
-              return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
-            }).join(' ');
-          } else if (effectiveLevel === 3) {
-            arabicHtml = words.map((w, idx) => {
-              if (idx % 2 === 1) {
-                return `<span class="hifz-masked-word" title="Cliquez pour révéler">${w}</span>`;
-              }
-              return w;
-            }).join(' ');
-          } else if (effectiveLevel === 4) {
-            arabicHtml = `
-              <div class="hifz-masked-full-wrapper" data-target="full-ar-${v.number}">
-                <span>Afficher le texte arabe</span>
-                <div id="full-ar-${v.number}" style="display:none; margin-top:6px; font-family:var(--font-quran); font-size:${state.arabicFontSize}px; color:#FFF; line-height:2;">
-                  ${v.textAr}
-                </div>
-              </div>
-            `;
-          }
-
-          block.innerHTML = `
-            <div class="verse-header-row">
-              <span class="verse-badge">${surah.nameFr} (${v.numberInSurah})</span>
-              <div class="verse-actions">
-                <button class="verse-action-btn record-recitation" title="Valider par ma voix" data-global-num="${v.number}" style="color:var(--text-secondary)">
-                  <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-                </button>
-                <button class="verse-action-btn play-verse" title="Écouter" data-global-num="${v.number}">
-                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <button class="verse-action-btn view-tafsir" title="Tafsir" data-global-num="${v.number}">
-                  <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-                </button>
-              </div>
-            </div>
-            <div class="verse-text-ar-container">
-              ${effectiveLevel === 4
-                ? arabicHtml
-                : `<div class="verse-text-ar" style="font-size: ${state.arabicFontSize}px">${arabicHtml}</div>`
-              }
-            </div>
-            ${v.transliteration ? `<div class="verse-text-trans">${v.transliteration}</div>` : ''}
-            <div class="verse-text-fr">${v.translation}</div>
-
-            <div class="srs-buttons-row" data-verse-key="${verseKey}">
-              <button class="btn-srs btn-srs-hard" data-rating="hard">🔴 Revoir</button>
-              <button class="btn-srs btn-srs-medium" data-rating="medium">🟡 Moyen</button>
-              <button class="btn-srs btn-srs-easy" data-rating="easy">🟢 Facile</button>
-            </div>
-          `;
-          pageEl.appendChild(block);
-        });
-      } else {
-        // Read mode: a dense, continuous Mushaf-style page — just the Arabic
-        // text flowing per surah, each verse closed by a small tappable
-        // ayah-end marker (opens the tafsir drawer) instead of a full card.
-        // This is what actually lets a whole page's worth of verses (can be
-        // 20-30+ short verses on a single real Mushaf page) fit in the frame
-        // at all, rather than the per-verse badges/buttons/translation of
-        // the card layout, which simply can't fit that many at once.
-        let activeSurahHeaderNum = null;
-        let currentFlow = null;
-
-        pageItems.forEach(item => {
-          const v = item.verse;
-          const surah = item.surah;
-          // The API glues the Bismillah directly onto ayah 1's text with no
-          // separator ("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ عَمَّ يَتَسَآءَلُونَ" as a single
-          // string) for every surah except Al-Fatiha — whose ayah 1 *is* the
-          // Bismillah — and At-Tawbah, which traditionally has none.
-          const normalizedText = v.textAr.normalize('NFC');
-          const hasGluedBismillah = v.numberInSurah === 1 && surah.number !== 1 && surah.number !== 9
-            && normalizedText.startsWith(BISMILLAH_AR);
-
-          if (activeSurahHeaderNum !== surah.number) {
-            activeSurahHeaderNum = surah.number;
-
-            const header = document.createElement('div');
-            header.className = 'mushaf-surah-header';
-            header.textContent = `${surah.nameFr} • ${surah.nameAr}`;
-            pageEl.appendChild(header);
-
-            if (hasGluedBismillah) {
-              const bismillahLine = document.createElement('div');
-              bismillahLine.className = 'mushaf-bismillah';
-              bismillahLine.dir = 'rtl';
-              bismillahLine.textContent = BISMILLAH_AR;
-              pageEl.appendChild(bismillahLine);
-            }
-
-            currentFlow = document.createElement('div');
-            currentFlow.className = 'mushaf-flow';
-            currentFlow.dir = 'rtl';
-            pageEl.appendChild(currentFlow);
-          }
-
-          const verseText = hasGluedBismillah ? normalizedText.slice(BISMILLAH_AR.length).trim() : v.textAr;
-
-          const verseSpan = document.createElement('span');
-          verseSpan.className = 'mushaf-verse';
-          verseSpan.id = `verse-${v.number}`;
-          verseSpan.dataset.verseNum = v.number;
-          verseSpan.dataset.surahNum = surah.number;
-          verseSpan.dataset.audioUrl = v.audio;
-          verseSpan.innerHTML = `${verseText} <span class="ayah-marker" data-global-num="${v.number}">${v.numberInSurah}</span> `;
-          currentFlow.appendChild(verseSpan);
-        });
+        currentFlow = document.createElement('div');
+        currentFlow.className = 'mushaf-flow';
+        currentFlow.dir = 'rtl';
+        pageEl.appendChild(currentFlow);
       }
-    }
+
+      const verseText = hasGluedBismillah ? normalizedText.slice(BISMILLAH_AR.length).trim() : v.textAr;
+
+      const verseSpan = document.createElement('span');
+      verseSpan.className = 'mushaf-verse';
+      verseSpan.id = `verse-${v.number}`;
+      verseSpan.dataset.verseNum = v.number;
+      verseSpan.dataset.surahNum = surah.number;
+      verseSpan.innerHTML = `${verseText} <span class="ayah-marker" data-global-num="${v.number}">${v.numberInSurah}</span> `;
+      currentFlow.appendChild(verseSpan);
+    });
 
     setupVerseInteractions();
     updatePagePaginationUI();
-    refreshDisplayLanguages();
     schedulePageDwellTracking(state.selectedJuz, state.currentPageIndex + 1);
     fitReaderPageToViewport();
 
@@ -1500,248 +1109,10 @@ document.addEventListener('DOMContentLoaded', () => {
         saveReadingPosition(num);
       });
     });
-
-    const blocks = targetParent.querySelectorAll('.verse-block');
-    blocks.forEach(block => {
-      // 1. Play button
-      const playBtn = block.querySelector('.play-verse');
-      if (playBtn) {
-        playBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const num = parseInt(playBtn.dataset.globalNum, 10);
-          playVerse(num);
-          saveReadingPosition(num);
-        });
-      }
-
-      // 2. Tafsir button
-      const tafsirBtn = block.querySelector('.view-tafsir');
-      if (tafsirBtn) {
-        tafsirBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const num = parseInt(tafsirBtn.dataset.globalNum, 10);
-          openTafsirDrawer(num);
-        });
-      }
-
-      // 3. Speech recording button
-      const recordBtn = block.querySelector('.record-recitation');
-      if (recordBtn) {
-        recordBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const num = parseInt(recordBtn.dataset.globalNum, 10);
-          startSpeechRecording(num, recordBtn);
-        });
-      }
-
-      // 4. Word mask interaction (for Hifz levels 2 & 3)
-      block.querySelectorAll('.hifz-masked-word').forEach(word => {
-        word.addEventListener('click', (e) => {
-          e.stopPropagation();
-          word.classList.toggle('revealed');
-        });
-      });
-
-      // 5. Full text mask wrapper (for Hifz level 4)
-      block.querySelectorAll('.hifz-masked-full-wrapper').forEach(wrapper => {
-        wrapper.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const targetId = wrapper.dataset.target;
-          const targetDiv = document.getElementById(targetId);
-          const span = wrapper.querySelector('span');
-          if (targetDiv) {
-            if (targetDiv.style.display === 'none') {
-              targetDiv.style.display = 'block';
-              if (span) span.textContent = 'Masquer le texte arabe';
-            } else {
-              targetDiv.style.display = 'none';
-              if (span) span.textContent = 'Afficher le texte arabe';
-            }
-          }
-        });
-      });
-
-      // 6. SRS buttons click handler
-      const srsRow = block.querySelector('.srs-buttons-row');
-      if (srsRow) {
-        const verseKey = srsRow.dataset.verseKey;
-        // Restore active class if rating exists in state
-        const existingRating = state.srsDatabase[verseKey];
-        if (existingRating && existingRating.difficulty) {
-          const activeBtn = srsRow.querySelector(`.btn-srs[data-rating="${existingRating.difficulty}"]`);
-          if (activeBtn) {
-            activeBtn.classList.add('active');
-          }
-        }
-
-        srsRow.querySelectorAll('.btn-srs').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const rating = btn.dataset.rating;
-            const intervals = { hard: 1, medium: 3, easy: 7 };
-            const intervalDays = intervals[rating] || 1;
-            
-            state.srsDatabase[verseKey] = {
-              nextReviewDate: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
-              difficulty: rating,
-              interval: intervalDays,
-              timestamp: Date.now()
-            };
-            
-            localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
-            
-            srsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            updateSRSDashboardCard();
-            
-            const ratingLabel = rating === 'easy' ? 'Facile' : rating === 'medium' ? 'Moyen' : 'À revoir';
-            showToast("Mise à jour SRS", `Verset marqué comme : ${ratingLabel}`);
-          });
-        });
-      }
-    });
   }
 
-  // Audio Playback
-  function playVerse(globalNum) {
-    if (!nativeAudioPlayer || !state.juzData) return;
-
-    let targetVerse = null;
-    let targetSurah = null;
-    
-    for (const surah of state.juzData.surahs) {
-      targetVerse = surah.verses.find(v => v.number === globalNum);
-      if (targetVerse) {
-        targetSurah = surah;
-        break;
-      }
-    }
-
-    if (!targetVerse) return;
-
-    if (state.currentPlayingVerseNum !== globalNum) {
-      state.currentPlayingVerseNum = globalNum;
-      state.audioPlayCount = 1;
-    }
-
-    document.querySelectorAll('.verse-block, .mushaf-verse').forEach(b => b.classList.remove('active-reciting'));
-
-    const activeBlock = document.getElementById(`verse-${globalNum}`);
-    if (activeBlock) {
-      activeBlock.classList.add('active-reciting');
-    }
-
-    nativeAudioPlayer.src = targetVerse.audio;
-    nativeAudioPlayer.load();
-    nativeAudioPlayer.play()
-      .then(() => {
-        audioWidget.style.display = 'flex';
-        audioVerseTitle.textContent = `${targetSurah.nameFr} • Verset ${targetVerse.numberInSurah} (Rép. ${state.audioPlayCount})`;
-        audioPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-      })
-      .catch(err => {
-        console.error("Audio playback error:", err);
-      });
-  }
-
-  function stopAudio() {
-    if (!nativeAudioPlayer) return;
-    nativeAudioPlayer.pause();
-    audioPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-    
-    if (state.currentPlayingVerseNum) {
-      const block = document.getElementById(`verse-${state.currentPlayingVerseNum}`);
-      if (block) block.classList.remove('active-reciting');
-    }
-  }
-
-  if (nativeAudioPlayer) {
-    nativeAudioPlayer.addEventListener('ended', () => {
-      if (!state.juzData) return;
-
-      if (state.audioLoopRepetitions === 'infinite') {
-        state.audioPlayCount++;
-        playVerse(state.currentPlayingVerseNum);
-      } else {
-        const targetLoops = parseInt(state.audioLoopRepetitions, 10);
-        if (state.audioPlayCount < targetLoops) {
-          state.audioPlayCount++;
-          playVerse(state.currentPlayingVerseNum);
-        } else {
-          state.audioPlayCount = 1;
-          const nextGlobalNum = state.currentPlayingVerseNum + 1;
-          
-          let nextExists = false;
-          let nextVerseObj = null;
-          for (const surah of state.juzData.surahs) {
-            nextVerseObj = surah.verses.find(v => v.number === nextGlobalNum);
-            if (nextVerseObj) {
-              nextExists = true;
-              break;
-            }
-          }
-
-          // Audio auto transitions page if next verse is on next page
-          if (nextExists && nextVerseObj) {
-            const curPage = state.pagesList[state.currentPageIndex];
-            if (nextVerseObj.page && nextVerseObj.page !== curPage) {
-              // Switch page index
-              const nextIdx = state.pagesList.indexOf(nextVerseObj.page);
-              if (nextIdx !== -1) {
-                state.currentPageIndex = nextIdx;
-                renderQuranText(true);
-              }
-            }
-            playVerse(nextGlobalNum);
-            saveReadingPosition(nextGlobalNum);
-          } else {
-            stopAudio();
-          }
-        }
-      }
-    });
-
-    nativeAudioPlayer.addEventListener('timeupdate', () => {
-      if (nativeAudioPlayer.duration) {
-        const pct = (nativeAudioPlayer.currentTime / nativeAudioPlayer.duration) * 100;
-        audioProgressBar.style.width = `${pct}%`;
-      }
-    });
-  }
-
-  if (audioPlayBtn) {
-    audioPlayBtn.addEventListener('click', () => {
-      if (nativeAudioPlayer.paused) {
-        if (state.currentPlayingVerseNum) {
-          nativeAudioPlayer.play();
-          audioPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-        } else {
-          const pageItems = getVersesOfCurrentPage();
-          if (pageItems.length > 0) {
-            const firstV = pageItems[0].verse;
-            playVerse(firstV.number);
-            saveReadingPosition(firstV.number);
-          }
-        }
-      } else {
-        nativeAudioPlayer.pause();
-        audioPlayBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-      }
-    });
-  }
-
-  const audioCloseBtn = document.getElementById('audio-close-btn');
-  if (audioCloseBtn) {
-    audioCloseBtn.addEventListener('click', () => {
-      stopAudio();
-      audioWidget.style.display = 'none';
-    });
-  }
-
-  // Scores how closely spokenText matches the expected verse text — shared
-  // by the reader's inline recitation check and the Hifz Workshop flashcard
-  // so the two don't drift into subtly different pass/fail rules.
+  // Scores how closely spokenText matches the expected verse text — used by
+  // the Hifz Workshop flashcard's voice check.
   function computeRecitationScore(spokenText, originalArabicText) {
     const originalWords = cleanArabicText(originalArabicText).split(' ').filter(Boolean);
     const spokenWords = cleanArabicText(spokenText).split(' ').filter(Boolean);
@@ -1751,20 +1122,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return { scorePct, passed: scorePct >= 70 };
   }
 
-  // "Auto" masking mode: derive how much help a verse gets from its own SRS
-  // record instead of applying one level to every verse on the page — never
-  // tested or rated hard gets full support, rated easy gets tested hardest.
-  function computeAutoHifzLevel(verseKey) {
-    const record = state.srsDatabase[verseKey];
-    if (!record) return 1;
-    if (record.difficulty === 'hard') return 1;
-    if (record.difficulty === 'medium') return 2;
-    return 4; // easy
-  }
-
   // Persists an SRS rating and schedules the next review date — shared by
-  // the reader's per-verse SRS buttons, the Hifz flashcard's SRS buttons,
-  // and the automatic pass/fail write after a voice check.
+  // the Hifz flashcard's SRS buttons and the automatic pass/fail write
+  // after a voice check.
   function scheduleSrsReview(verseKey, rating) {
     const intervals = { hard: 1, medium: 3, easy: 7 };
     const intervalDays = intervals[rating] || 1;
@@ -1978,64 +1338,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function closeSpeechModal() {
-    if (speechModal) speechModal.style.display = 'none';
-    if (speechFallbackRow) speechFallbackRow.style.display = 'none';
-    document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
-  }
-
-  // Voice Speech Recognition Integration (Reader View)
-  function startSpeechRecording(globalNum, buttonElement) {
-    stopAudio();
-    state.recordingVerseNum = globalNum;
-
-    if (speechModal && speechTranscription) {
-      speechModal.style.display = 'flex';
-      speechTranscription.textContent = "(Parlez maintenant...)";
-    }
-    if (speechFallbackRow) speechFallbackRow.style.display = 'none';
-
-    document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
-    if (buttonElement) buttonElement.classList.add('listening-active');
-
-    state.activeRecognition = createSpeechRecognizer({
-      onInterimResult: (text) => { speechTranscription.textContent = text; },
-      onFinalResult: (text) => evaluateSpeechResult(text),
-      onNoSpeech: () => {
-        speechTranscription.textContent = "(Rien entendu, réessayez.)";
-        document.querySelectorAll('.record-recitation').forEach(b => b.classList.remove('listening-active'));
-      },
-      onUnsupported: () => {
-        speechTranscription.textContent = "(Reconnaissance vocale indisponible.)";
-        if (speechFallbackMsg) speechFallbackMsg.textContent = "Reconnaissance vocale indisponible sur cet appareil.";
-        if (speechFallbackRow) speechFallbackRow.style.display = 'flex';
-      },
-      onPermissionDenied: () => {
-        speechTranscription.textContent = "(Permission micro refusée.)";
-        if (speechFallbackMsg) speechFallbackMsg.textContent = "L'accès au micro a été refusé.";
-        if (speechFallbackRow) speechFallbackRow.style.display = 'flex';
-      }
-    });
-  }
-
-  function getActiveRecordingVerse() {
-    if (!state.recordingVerseNum || !state.juzData) return null;
-    for (const surah of state.juzData.surahs) {
-      const v = surah.verses.find(verse => verse.number === state.recordingVerseNum);
-      if (v) return v;
-    }
-    return null;
-  }
-
-  function cancelSpeechRecording() {
-    if (state.activeRecognition) {
-      state.activeRecognition.onend = null;
-      state.activeRecognition.stop();
-      state.activeRecognition = null;
-    }
-    closeSpeechModal();
-  }
-
   // Remove diacritics (Harakat/Tashkeel) from Arabic text
   function cleanArabicText(text) {
     if (!text) return '';
@@ -2047,52 +1349,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()؟?]/g, "")
       .replace(/\s+/g, " ")
       .trim();
-  }
-
-  // Evaluate speech result (Reader View) — also reached with an empty
-  // spokenText from the manual "À revoir" fallback button, which correctly
-  // scores as 0% via computeRecitationScore.
-  function evaluateSpeechResult(spokenText) {
-    if (state.activeRecognition) {
-      state.activeRecognition.onend = null;
-      state.activeRecognition.stop();
-      state.activeRecognition = null;
-    }
-
-    const globalNum = state.recordingVerseNum;
-    const verseBlock = document.getElementById(`verse-${globalNum}`);
-    const verseObj = getActiveRecordingVerse();
-
-    if (!verseBlock || !verseObj) {
-      closeSpeechModal();
-      return;
-    }
-
-    const { scorePct, passed } = computeRecitationScore(spokenText, verseObj.textAr);
-    const rating = passed ? 'easy' : 'hard';
-    const quote = spokenText ? ` - "${spokenText.substring(0, 20)}..."` : '';
-
-    verseBlock.classList.remove('recitation-success', 'recitation-error');
-    verseBlock.classList.add(passed ? 'recitation-success' : 'recitation-error');
-
-    const srsRow = verseBlock.querySelector('.srs-buttons-row');
-    if (srsRow) {
-      srsRow.querySelectorAll('.btn-srs').forEach(b => b.classList.remove('active'));
-      srsRow.querySelector(passed ? '.btn-srs-easy' : '.btn-srs-hard').classList.add('active');
-    }
-
-    const verseKey = `juz_${state.selectedJuz}_surah_${verseBlock.dataset.surahNum}_verse_${verseObj.numberInSurah}`;
-    scheduleSrsReview(verseKey, rating);
-
-    if (passed) {
-      showToast("Récitation Réussie ! 🎉", `Précision : ${scorePct}%${quote}`);
-      createConfetti(verseBlock);
-    } else {
-      showToast("À revoir ⚠️", `Précision : ${scorePct}%${quote}`);
-    }
-
-    updateSRSDashboardCard();
-    closeSpeechModal();
   }
 
   // ==================== HIFZ WORKSHOP LOGIC ====================
@@ -2415,14 +1671,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Context triggers
     if (viewId === 'reader') {
-      const hifzToolbar = document.getElementById('hifz-toolbar');
-      if (hifzToolbar) hifzToolbar.style.display = 'none';
-      setReaderMode('read');
       if (!state.juzData || state.juzData.juzNumber !== state.selectedJuz) {
         loadJuzData();
       } else {
         renderQuranText();
-        checkJuzAudioCacheStatus();
       }
     } else if (viewId === 'memorize') {
       loadHifzDashboard();
@@ -2438,11 +1690,8 @@ document.addEventListener('DOMContentLoaded', () => {
       updateProgress(null, true); // also re-renders the heatmap internally
       renderDashboardStats();
       checkInitialReadingPosition();
-    } else {
-      const hifzToolbar = document.getElementById('hifz-toolbar');
-      if (hifzToolbar) hifzToolbar.style.display = 'none';
     }
-    
+
     const mainEl = document.querySelector('main');
     if (mainEl) mainEl.scrollTop = 0;
   }
@@ -2705,50 +1954,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function setReaderMode(mode) {
-    state.readerMode = mode;
-    if (mode !== 'read') cancelPageDwellTracking();
-    const readBtn = document.getElementById('switch-read');
-    const memoBtn = document.getElementById('switch-memorize');
-
-    if (readBtn && memoBtn) {
-      if (mode === 'memorize') {
-        readBtn.classList.remove('active');
-        memoBtn.classList.add('active');
-      } else {
-        readBtn.classList.add('active');
-        memoBtn.classList.remove('active');
-      }
-    }
-
-    // Lecture mode's dense Mushaf page doesn't render inline translation/
-    // phonetic text, so these toggles have nothing to control there.
-    const displayTogglesCard = document.getElementById('display-toggles-card');
-    if (displayTogglesCard) {
-      displayTogglesCard.style.display = mode === 'memorize' ? 'flex' : 'none';
-    }
-
-    if (mode === 'memorize') updateHifzGamificationUI();
-  }
-
-  const readBtn = document.getElementById('switch-read');
-  const memoBtn = document.getElementById('switch-memorize');
-  
-  if (readBtn) {
-    readBtn.addEventListener('click', () => { 
-      setReaderMode('read'); 
-      hifzToolbar.style.display = 'none';
-      renderQuranText(); 
-    });
-  }
-  if (memoBtn) {
-    memoBtn.addEventListener('click', () => { 
-      setReaderMode('memorize'); 
-      hifzToolbar.style.display = 'flex';
-      renderQuranText(); 
-    });
-  }
-
   // Dashboard SRS Card Update
   function updateSRSDashboardCard() {
     if (!srsRevisionsCard || !srsRevisionsCountText) return;
@@ -2888,36 +2093,6 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(randomAct.name, randomAct.text);
 
     }, 35000); 
-  }
-
-  // Font Size
-  // state.arabicFontSize is a plain px value; the responsive engine (inline
-  // script in index.html <head>) scales the whole app uniformly via CSS
-  // `zoom` on #app-container, so this doesn't need to account for screen
-  // size itself — zoom scales it along with everything else automatically.
-  const btnFontDec = document.getElementById('btn-font-dec');
-  const btnFontInc = document.getElementById('btn-font-inc');
-
-  if (btnFontDec) {
-    btnFontDec.addEventListener('click', () => {
-      if (state.arabicFontSize > 18) {
-        state.arabicFontSize -= 2;
-        document.querySelectorAll('.verse-text-ar').forEach(el => {
-          el.style.fontSize = `${state.arabicFontSize}px`;
-        });
-      }
-    });
-  }
-
-  if (btnFontInc) {
-    btnFontInc.addEventListener('click', () => {
-      if (state.arabicFontSize < 40) {
-        state.arabicFontSize += 2;
-        document.querySelectorAll('.verse-text-ar').forEach(el => {
-          el.style.fontSize = `${state.arabicFontSize}px`;
-        });
-      }
-    });
   }
 
   // Tafsir & Asbab an-Nuzul Drawer
