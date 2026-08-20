@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Wird - Votre Compagnon Coranique Quotidien</title>
   <meta name="description" content="Une application moderne et spirituelle pour lire, comprendre et mémoriser le Coran au quotidien.">
+  <meta name="theme-color" content="#070913">
   <script>
     (function(){
       try {
@@ -12,6 +13,13 @@
         var palette = localStorage.getItem('wird_palette') || 'gold';
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-palette', palette);
+        // Matches the meta tag to the saved theme before first paint —
+        // otherwise Android reads the static dark default for the
+        // standalone PWA's system nav-bar color and never repaints it,
+        // even once app.js's applyTheme() updates the tag later.
+        var themeColor = theme === 'light' ? '#f2efe9' : theme === 'sepia' ? '#E8DACB' : '#070913';
+        var metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', themeColor);
       } catch (e) {}
     })();
   </script>
@@ -111,7 +119,6 @@
   </script>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#070913">
   <link rel="apple-touch-icon" href="icon.jpg">
 </head>
 <body>
