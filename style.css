@@ -992,15 +992,21 @@ main::-webkit-scrollbar {
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   z-index: 100;
   transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.8);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   max-height: 70%;
   display: flex;
   flex-direction: column;
 }
 
+/* Only cast the shadow while actually open — translateY(100%) moves the
+   drawer's own box off-screen, but a box-shadow isn't clipped by that: its
+   blur radius bled upward past the drawer's (off-screen) top edge and back
+   into the visible viewport even while "closed", and every closed drawer
+   (tafsir, settings, onboarding, Hifz flashcard, Juz summary all share this
+   class) stacked its own copy of that bleed at the bottom of every screen. */
 .tafsir-drawer.open {
   transform: translateY(0);
+  box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.8);
 }
 
 /* .tafsir-header/.tafsir-content are shared by every bottom-sheet drawer
