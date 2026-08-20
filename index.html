@@ -559,9 +559,8 @@
       <section id="view-memorize" class="view">
         <div class="social-header" style="margin-bottom: 16px;">
           <h2 style="font-size: 1.25rem; font-weight: 700; color: #FFF;">Atelier Mémorisation</h2>
-          <span id="hifz-juz-badge" style="font-size: 0.6875rem; color: var(--primary); font-weight:600; padding: 4px 10px; background: rgba(212, 175, 55, 0.1); border-radius:20px;">
-            Juz 30
-          </span>
+          <!-- Populated via JS (populateHifzJuzSelect) — independent of the Reader's own Juz -->
+          <select id="hifz-juz-select" class="hifz-juz-select"></select>
         </div>
 
         <!-- Kid mode mascot: sits in normal document flow, above everything
@@ -714,35 +713,76 @@
 
     </main>
 
-    <!-- Hifz Flashcard Overlay Modal -->
+    <!-- Hifz Flashcard Overlay Modal — a 3-phase study cycle (Découvrir /
+         S'entraîner / Tester) rather than a single-shot voice quiz. All
+         three phases live in this one drawer; renderHifzCardPhase() in
+         app.js shows/hides sections per state.hifzCardPhase. -->
     <div id="hifz-flashcard-modal" class="tafsir-drawer" style="max-height: 85%; z-index: 110;">
       <div class="tafsir-header">
         <h3>Flashcard Récitation <span id="hifz-card-ref">78:1</span></h3>
         <button id="hifz-card-close" class="btn-close-drawer">&times;</button>
       </div>
       <div id="hifz-session-banner" style="display:none; font-size: 0.625rem; font-weight:700; color: var(--primary); text-align:center; padding: 4px 0 0;"></div>
+
+      <!-- Phase indicator: 1 Découvrir / 2 S'entraîner / 3 Tester -->
+      <div id="hifz-phase-indicator" class="hifz-phase-indicator">
+        <div class="hifz-phase-dot" data-phase="discover"><span class="hifz-phase-dot-num">1</span><span class="hifz-phase-dot-label">Découvrir</span></div>
+        <div class="hifz-phase-dot" data-phase="practice"><span class="hifz-phase-dot-num">2</span><span class="hifz-phase-dot-label">S'entraîner</span></div>
+        <div class="hifz-phase-dot" data-phase="test"><span class="hifz-phase-dot-num">3</span><span class="hifz-phase-dot-label">Tester</span></div>
+      </div>
+
       <div class="tafsir-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding-bottom: 30px;">
-        
-        <!-- Clue 1: Translation -->
+
+        <!-- Audio: shared by Découvrir + S'entraîner, hidden in Tester -->
+        <div id="hifz-audio-row" class="hifz-audio-row">
+          <audio id="hifz-card-audio" preload="none"></audio>
+          <button id="hifz-audio-play-btn" class="hifz-audio-play-btn" type="button">▶ Écouter</button>
+          <span id="hifz-audio-unavailable-note" class="hifz-audio-unavailable-note" style="display:none;">Audio indisponible hors-ligne</span>
+        </div>
+
+        <!-- Hints toggle: S'entraîner only — indices repliés par défaut -->
+        <div id="hifz-card-hints-toggle-row" style="display:none;">
+          <button id="hifz-hints-toggle-btn" class="hifz-skip-link" type="button">👁 Afficher les indices</button>
+        </div>
+
+        <!-- Clues: translation + transliteration, shown/hidden as one block -->
+        <div id="hifz-card-hints-block" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
         <div style="width:100%;">
           <div style="font-size: 0.6875rem; color: var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom: 6px;">Indice : Traduction</div>
           <div id="hifz-card-translation" style="font-size: 0.9375rem; font-weight:600; color: #FFF; line-height: 1.5; padding: 0 10px;">
             "Sur quoi s'interrogent-ils mutuellement ?"
           </div>
         </div>
-        
-        <!-- Clue 2: Transliteration -->
         <div id="hifz-card-translit" style="font-size: 0.75rem; color: rgba(255,255,255,0.75); font-style: italic; margin-bottom: 4px;">
           ‘Amma yatasā’alūn
         </div>
+        </div>
 
-        <!-- The Arabic text placeholder, reveals after validation -->
+        <!-- Mask toggle: S'entraîner only -->
+        <div id="hifz-mask-toggle-row" style="display:none; width:100%;">
+          <button id="hifz-mask-toggle-btn" class="hifz-masked-full-wrapper" style="width:100%; display:block;" type="button" data-all-revealed="false">
+            <span>Masquer tout</span>
+          </button>
+        </div>
+
+        <!-- Arabic text — plain placeholder-then-reveal in Découvrir/Tester,
+             tokenized tap-to-reveal words in S'entraîner (see renderHifzCardPhase) -->
         <div id="hifz-card-arabic-wrapper" style="width: 100%; min-height: 80px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border: 1.5px dashed var(--border-card); border-radius: var(--radius-md); padding: 14px; transition: var(--transition-smooth);">
           <span id="hifz-card-placeholder" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); font-style:italic;">Enregistrez votre voix pour valider...</span>
           <div id="hifz-card-arabic" style="display: none; font-family: var(--font-quran); font-size: 1.625rem; color: #FFF; line-height: 1.8; direction: rtl; text-align:right;">
             عَمَّ يَتَسَاءَلُونَ
           </div>
         </div>
+
+        <!-- Phase advance controls -->
+        <div id="hifz-phase-advance-row" class="hifz-phase-advance-row">
+          <button id="hifz-btn-discover-continue" class="hifz-hero-btn" style="display:none;" type="button">Continuer →</button>
+          <button id="hifz-btn-practice-ready" class="hifz-hero-btn" style="display:none;" type="button">Je suis prêt →</button>
+          <button id="hifz-btn-skip-to-test" class="hifz-skip-link" style="display:none;" type="button">Passer au test →</button>
+        </div>
+
+        <!-- Tester phase: mic check + fallback + SRS rating (unchanged logic) -->
+        <div id="hifz-phase-test-controls" style="width:100%; display:flex; flex-direction:column; align-items:center; gap:16px;">
 
         <!-- Large Mic Button to record -->
         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; margin: 4px 0;">
@@ -766,6 +806,8 @@
           <button class="btn-srs btn-srs-hard" data-hifz-rating="hard">🔴 Revoir (1j)</button>
           <button class="btn-srs btn-srs-medium" data-hifz-rating="medium">🟡 Moyen (3j)</button>
           <button class="btn-srs btn-srs-easy" data-hifz-rating="easy">🟢 Facile (7j)</button>
+        </div>
+
         </div>
 
       </div>

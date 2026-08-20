@@ -69,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedReciter: 'ar.minshawi',
     // Active Juz data from API
     juzData: null,
+    // The Atelier Mémorisation has its own Juz selection, independent of the
+    // Reader's — so browsing Juz X to practice memorization never disturbs
+    // what the Reader/Wird plan currently has loaded.
+    hifzSelectedJuz: 30,
+    hifzJuzData: null,
+    // Which step of the flashcard's Découvrir/S'entraîner/Tester cycle is
+    // currently shown — transient, reset every time a card opens.
+    hifzCardPhase: 'discover',
     // Audio State
     currentPlayingVerseNum: null, // Global verse number (1-6236)
     audioLoopRepetitions: '1', // '1', '3', '5', 'infinite'
@@ -156,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastContainer = document.getElementById('toast-container');
 
   // Hifz Refactored Workshop elements (view-memorize)
-  const hifzJuzBadge = document.getElementById('hifz-juz-badge');
+  const hifzJuzSelect = document.getElementById('hifz-juz-select');
   const hifzSurahList = document.getElementById('hifz-surah-list');
   const hifzDueDetail = document.getElementById('hifz-due-detail');
   const btnHifzStartSession = document.getElementById('btn-hifz-start-session');
@@ -181,6 +189,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const hifzCardFallbackKnown = document.getElementById('hifz-card-fallback-known');
   const hifzCardFallbackUnsure = document.getElementById('hifz-card-fallback-unsure');
   const hifzCardSrsRow = document.getElementById('hifz-card-srs-row');
+
+  // Hifz Flashcard phase-cycle elements (Découvrir / S'entraîner / Tester)
+  const hifzPhaseDots = document.querySelectorAll('.hifz-phase-dot');
+  const hifzAudioRow = document.getElementById('hifz-audio-row');
+  const hifzCardAudio = document.getElementById('hifz-card-audio');
+  const hifzAudioPlayBtn = document.getElementById('hifz-audio-play-btn');
+  const hifzAudioUnavailableNote = document.getElementById('hifz-audio-unavailable-note');
+  const hifzHintsToggleRow = document.getElementById('hifz-card-hints-toggle-row');
+  const hifzHintsToggleBtn = document.getElementById('hifz-hints-toggle-btn');
+  const hifzCardHintsBlock = document.getElementById('hifz-card-hints-block');
+  const hifzMaskToggleRow = document.getElementById('hifz-mask-toggle-row');
+  const hifzMaskToggleBtn = document.getElementById('hifz-mask-toggle-btn');
+  const hifzBtnDiscoverContinue = document.getElementById('hifz-btn-discover-continue');
+  const hifzBtnPracticeReady = document.getElementById('hifz-btn-practice-ready');
+  const hifzBtnSkipToTest = document.getElementById('hifz-btn-skip-to-test');
+  const hifzPhaseTestControls = document.getElementById('hifz-phase-test-controls');
+  const hifzPhaseAdvanceRow = document.getElementById('hifz-phase-advance-row');
   
   const drawerOverlay = document.getElementById('drawer-overlay');
 
@@ -253,6 +278,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedJuz) state.selectedJuz = parseInt(savedJuz, 10);
   } catch (err) {
     console.warn("Failed to parse wird_selected_juz", err);
+  }
+  state.hifzSelectedJuz = state.selectedJuz;
+
+  try {
+    const savedHifzJuz = localStorage.getItem('wird_hifz_selected_juz');
+    if (savedHifzJuz) state.hifzSelectedJuz = parseInt(savedHifzJuz, 10);
+  } catch (err) {
+    console.warn("Failed to parse wird_hifz_selected_juz", err);
   }
 
   const savedReciter = localStorage.getItem('wird_selected_reciter');
@@ -356,6 +389,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnStartRevision) btnStartRevision.addEventListener('click', startReviewSession);
     if (btnHifzStartSession) btnHifzStartSession.addEventListener('click', startReviewSession);
 
+    // Atelier's own Juz picker — deliberately separate from the Reader's
+    // selectedJuz (see state.hifzSelectedJuz).
+    if (hifzJuzSelect) {
+      hifzJuzSelect.addEventListener('change', (e) => {
+        state.hifzSelectedJuz = parseInt(e.target.value, 10);
+        localStorage.setItem('wird_hifz_selected_juz', state.hifzSelectedJuz);
+        loadHifzDashboard();
+      });
+    }
+
     // Social post button binding
     if (btnCirclePost && inputCirclePost) {
       btnCirclePost.addEventListener('click', postStatusToCircle);
@@ -367,6 +410,62 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hifz Flashcard Bindings
     if (hifzCardClose) hifzCardClose.addEventListener('click', closeHifzFlashcard);
     if (hifzCardMicBtn) hifzCardMicBtn.addEventListener('click', startHifzVoiceRecording);
+
+    // Phase-cycle bindings (Découvrir → S'entraîner → Tester)
+    if (hifzBtnDiscoverContinue) {
+      hifzBtnDiscoverContinue.addEventListener('click', () => {
+        state.hifzCardPhase = 'practice';
+        renderHifzCardPhase();
+      });
+    }
+    if (hifzBtnPracticeReady || hifzBtnSkipToTest) {
+      [hifzBtnPracticeReady, hifzBtnSkipToTest].forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+          state.hifzCardPhase = 'test';
+          renderHifzCardPhase();
+        });
+      });
+    }
+    if (hifzHintsToggleBtn && hifzCardHintsBlock) {
+      hifzHintsToggleBtn.addEventListener('click', () => {
+        const isHidden = hifzCardHintsBlock.style.display === 'none';
+        hifzCardHintsBlock.style.display = isHidden ? 'flex' : 'none';
+        hifzHintsToggleBtn.textContent = isHidden ? '🙈 Cacher les indices' : '👁 Afficher les indices';
+      });
+    }
+    // Bulk mask/reveal — flips every tokenized word span at once.
+    if (hifzMaskToggleBtn) {
+      hifzMaskToggleBtn.addEventListener('click', () => {
+        const nowRevealed = hifzMaskToggleBtn.dataset.allRevealed !== 'true';
+        hifzCardArabic.querySelectorAll('.hifz-masked-word').forEach(w => {
+          w.classList.toggle('revealed', nowRevealed);
+        });
+        hifzMaskToggleBtn.dataset.allRevealed = String(nowRevealed);
+        const label = hifzMaskToggleBtn.querySelector('span');
+        if (label) label.textContent = nowRevealed ? 'Révéler tout' : 'Masquer tout';
+      });
+    }
+    // Delegated: individual masked-word taps, rebuilt fresh on every phase render.
+    if (hifzCardArabic) {
+      hifzCardArabic.addEventListener('click', (e) => {
+        if (e.target.classList.contains('hifz-masked-word')) {
+          e.target.classList.toggle('revealed');
+        }
+      });
+    }
+    if (hifzAudioPlayBtn && hifzCardAudio) {
+      hifzAudioPlayBtn.addEventListener('click', () => {
+        if (hifzCardAudio.paused) {
+          hifzCardAudio.play().catch(() => {});
+        } else {
+          hifzCardAudio.pause();
+        }
+      });
+      hifzCardAudio.addEventListener('play', () => { hifzAudioPlayBtn.textContent = '⏸ Pause'; });
+      hifzCardAudio.addEventListener('pause', () => { hifzAudioPlayBtn.textContent = '▶ Écouter'; });
+      hifzCardAudio.addEventListener('ended', () => { hifzAudioPlayBtn.textContent = '▶ Écouter'; });
+    }
 
     // Manual fallback — only ever shown when SpeechRecognition is unsupported
     // or the mic permission was denied (see startHifzVoiceRecording).
@@ -1073,16 +1172,39 @@ document.addEventListener('DOMContentLoaded', () => {
     return { scorePct, passed: scorePct >= 70 };
   }
 
-  // Persists an SRS rating and schedules the next review date — shared by
-  // the Hifz flashcard's SRS buttons and the automatic pass/fail write
-  // after a voice check.
+  // Persists an SRS rating and schedules the next review date using a
+  // simplified SM-2-style growing interval (not a flat 1/3/7-day bucket):
+  // repeated "easy" ratings push the interval further out each time instead
+  // of always landing exactly 7 days later, so a verse known for months
+  // gets reviewed less often than one just barely graduated from "hard".
   function scheduleSrsReview(verseKey, rating) {
-    const intervals = { hard: 1, medium: 3, easy: 7 };
-    const intervalDays = intervals[rating] || 1;
+    // Defaults also cover legacy records saved before this rewrite (they
+    // only ever had {nextReviewDate, difficulty, interval, timestamp}) —
+    // read as a fresh-start case rather than crashing on undefined fields.
+    const prev = state.srsDatabase[verseKey] || {};
+    let repetitions = prev.repetitions || 0;
+    let easeFactor = prev.easeFactor || 2.5;
+    let interval = prev.interval || 0;
+
+    if (rating === 'hard') {
+      repetitions = 0;
+      easeFactor = Math.max(1.3, easeFactor - 0.2);
+      interval = 1;
+    } else if (rating === 'medium') {
+      repetitions += 1;
+      interval = interval > 0 ? Math.round(interval * 1.3) : 3;
+    } else { // 'easy'
+      repetitions += 1;
+      interval = interval > 0 ? Math.round(interval * easeFactor) : 7;
+      easeFactor = Math.min(2.8, easeFactor + 0.1);
+    }
+
     state.srsDatabase[verseKey] = {
-      nextReviewDate: Date.now() + intervalDays * 24 * 60 * 60 * 1000,
+      nextReviewDate: Date.now() + interval * 24 * 60 * 60 * 1000,
       difficulty: rating,
-      interval: intervalDays,
+      interval,
+      repetitions,
+      easeFactor,
       timestamp: Date.now()
     };
     localStorage.setItem('wird_srs_database', JSON.stringify(state.srsDatabase));
@@ -1153,7 +1275,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('hifz-badges-row');
     if (!container) return;
     const streak = computeHifzStreak();
-    const masteredGlobal = Object.values(state.srsDatabase).filter(r => r.difficulty === 'easy').length;
+    const now = Date.now();
+    const masteredGlobal = Object.values(state.srsDatabase).filter(r => r.difficulty === 'easy' && r.nextReviewDate > now).length;
     const totalTested = Object.keys(state.srsDatabase).length;
     const metrics = { masteredGlobal, totalTested };
 
@@ -1189,8 +1312,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Starts a focused practice session on a single surah — every verse in
   // it, verses not yet mastered first — rather than only what's due today.
   function startSurahPracticeSession(surahNum, juzNum) {
-    if (!state.juzData) return;
-    const surah = state.juzData.surahs.find(s => s.number === surahNum);
+    if (!state.hifzJuzData) return;
+    const surah = state.hifzJuzData.surahs.find(s => s.number === surahNum);
     if (!surah) return;
 
     const keys = surah.verses.map(v => `juz_${juzNum}_surah_${surahNum}_verse_${v.numberInSurah}`);
@@ -1213,16 +1336,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // practice session on that surah instead of testing one verse at a time.
   function renderHifzSurahCards() {
     const container = document.getElementById('hifz-surah-list');
-    if (!container || !state.juzData) return;
+    if (!container || !state.hifzJuzData) return;
 
+    const now = Date.now();
     container.innerHTML = '';
-    state.juzData.surahs.forEach(surah => {
+    state.hifzJuzData.surahs.forEach(surah => {
       const total = surah.verses.length;
       let mastered = 0;
       surah.verses.forEach(v => {
-        const key = `juz_${state.selectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
+        const key = `juz_${state.hifzSelectedJuz}_surah_${surah.number}_verse_${v.numberInSurah}`;
         const record = state.srsDatabase[key];
-        if (record && record.difficulty === 'easy') mastered++;
+        // A verse only counts as "mastered" while its easy rating is still
+        // fresh (not yet due again) — an overdue verse visually drops back
+        // out until it's reviewed, even if its last rating was easy.
+        if (record && record.difficulty === 'easy' && record.nextReviewDate > now) mastered++;
       });
       const pct = total > 0 ? Math.round((mastered / total) * 100) : 0;
 
@@ -1238,7 +1365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <button class="hifz-surah-card-play" aria-label="Pratiquer cette sourate">▶</button>
       `;
-      card.addEventListener('click', () => startSurahPracticeSession(surah.number, state.selectedJuz));
+      card.addEventListener('click', () => startSurahPracticeSession(surah.number, state.hifzSelectedJuz));
       container.appendChild(card);
     });
   }
@@ -1373,37 +1500,49 @@ document.addEventListener('DOMContentLoaded', () => {
     openHifzFlashcard(verse, surah, juzNum, `Sourate ${surah.number}:${verse.numberInSurah}`);
   }
 
+  // Populates the Atelier's own Juz picker (1-30), independent of the
+  // Reader's #select-juz — this select drives state.hifzSelectedJuz only.
+  function populateHifzJuzSelect() {
+    if (!hifzJuzSelect) return;
+    hifzJuzSelect.innerHTML = '';
+    for (let i = 1; i <= 30; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `Juz ${i}`;
+      if (i === state.hifzSelectedJuz) opt.selected = true;
+      hifzJuzSelect.appendChild(opt);
+    }
+  }
+
   // Load and Render the visual Hifz Dashboard Grid (view-memorize)
   async function loadHifzDashboard() {
-    if (!hifzSurahList || !hifzJuzBadge) return;
+    if (!hifzSurahList || !hifzJuzSelect) return;
 
     renderKidMascotMessage();
-    hifzJuzBadge.textContent = `Juz ${state.selectedJuz}`;
+    hifzJuzSelect.value = state.hifzSelectedJuz;
     hifzSurahList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); padding: 20px; font-size: 0.75rem;">Chargement du plan de révision...</div>';
     updateHifzDueSummary();
     updateHifzGamificationUI();
 
-    if (!state.juzData || state.juzData.juzNumber !== state.selectedJuz) {
-      try {
-        const data = await window.QuranAPI.fetchJuz(state.selectedJuz, state.selectedReciter);
-        state.juzData = data;
-      } catch (err) {
-        console.warn("Offline fallback for Hifz grid", err);
-        const fallbackSurah = window.quranData;
-        state.juzData = {
-          juzNumber: 30,
-          surahs: [{
-            number: fallbackSurah.surahNumber,
-            nameAr: fallbackSurah.surahNameAr,
-            nameFr: fallbackSurah.surahNameFr,
-            translationName: fallbackSurah.surahTranslation,
-            verses: fallbackSurah.verses.map((v, idx) => {
-              v.page = 582 + Math.floor(idx / 10);
-              return v;
-            })
-          }]
-        };
-      }
+    try {
+      state.hifzJuzData = await ensureJuzDataLoaded(state.hifzSelectedJuz);
+    } catch (err) {
+      console.warn("Offline fallback for Hifz grid", err);
+      const fallbackSurah = window.quranData;
+      state.hifzJuzData = {
+        juzNumber: 30,
+        surahs: [{
+          number: fallbackSurah.surahNumber,
+          nameAr: fallbackSurah.surahNameAr,
+          nameFr: fallbackSurah.surahNameFr,
+          translationName: fallbackSurah.surahTranslation,
+          verses: fallbackSurah.verses.map((v, idx) => {
+            v.page = 582 + Math.floor(idx / 10);
+            v.numberInSurah = idx + 1;
+            return v;
+          })
+        }]
+      };
     }
 
     renderHifzSurahCards();
@@ -1420,6 +1559,98 @@ document.addEventListener('DOMContentLoaded', () => {
       : "Aucun verset à réviser pour le moment";
   }
 
+  // A verse with no SRS record yet has never been studied → start with the
+  // full Découvrir teaching pass. Any verse that's already been rated at
+  // least once (including every due-review verse, by definition) skips
+  // straight to S'entraîner — no special-casing needed at the call sites.
+  function determineHifzCardPhase(verseKey) {
+    return state.srsDatabase[verseKey] ? 'practice' : 'discover';
+  }
+
+  // Wraps each space-separated word in a tappable .hifz-masked-word span
+  // for the S'entraîner phase's progressive-recall masking.
+  function tokenizeHifzArabicWords(text) {
+    return text.split(' ').filter(Boolean)
+      .map(w => `<span class="hifz-masked-word">${w}</span>`)
+      .join(' ');
+  }
+
+  // Single source of truth for what's visible in the flashcard, driven by
+  // state.hifzCardPhase. Called on open and on every phase transition.
+  function renderHifzCardPhase() {
+    const verse = state.activeHifzVerse;
+    if (!verse) return;
+    const phase = state.hifzCardPhase;
+
+    const order = ['discover', 'practice', 'test'];
+    const currentIdx = order.indexOf(phase);
+    hifzPhaseDots.forEach(dot => {
+      const dotIdx = order.indexOf(dot.dataset.phase);
+      dot.classList.toggle('active', dotIdx === currentIdx);
+      dot.classList.toggle('done', dotIdx < currentIdx);
+    });
+
+    // Audio: available while discovering/practicing, not during the test.
+    const hasAudio = !!verse.audio;
+    if (hifzCardAudio) {
+      hifzCardAudio.pause();
+      hifzCardAudio.currentTime = 0;
+      hifzCardAudio.src = hasAudio ? verse.audio : '';
+    }
+    if (hifzAudioPlayBtn) {
+      hifzAudioPlayBtn.textContent = '▶ Écouter';
+      hifzAudioPlayBtn.style.display = hasAudio ? 'inline-flex' : 'none';
+    }
+    if (hifzAudioUnavailableNote) hifzAudioUnavailableNote.style.display = hasAudio ? 'none' : 'block';
+    if (hifzAudioRow) hifzAudioRow.style.display = phase === 'test' ? 'none' : 'flex';
+
+    if (hifzPhaseAdvanceRow) hifzPhaseAdvanceRow.style.display = phase === 'test' ? 'none' : 'flex';
+    if (hifzBtnDiscoverContinue) hifzBtnDiscoverContinue.style.display = phase === 'discover' ? 'inline-flex' : 'none';
+    if (hifzBtnPracticeReady) hifzBtnPracticeReady.style.display = phase === 'practice' ? 'inline-flex' : 'none';
+    if (hifzBtnSkipToTest) hifzBtnSkipToTest.style.display = phase === 'test' ? 'none' : 'inline-flex';
+    if (hifzPhaseTestControls) hifzPhaseTestControls.style.display = phase === 'test' ? 'flex' : 'none';
+
+    if (phase === 'discover') {
+      if (hifzCardHintsBlock) hifzCardHintsBlock.style.display = 'flex';
+      if (hifzHintsToggleRow) hifzHintsToggleRow.style.display = 'none';
+      if (hifzMaskToggleRow) hifzMaskToggleRow.style.display = 'none';
+      hifzCardPlaceholder.style.display = 'none';
+      hifzCardArabic.style.display = 'block';
+      hifzCardArabic.textContent = verse.textAr;
+      hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
+    } else if (phase === 'practice') {
+      if (hifzCardHintsBlock) hifzCardHintsBlock.style.display = 'none';
+      if (hifzHintsToggleRow) hifzHintsToggleRow.style.display = 'block';
+      if (hifzHintsToggleBtn) hifzHintsToggleBtn.textContent = '👁 Afficher les indices';
+      if (hifzMaskToggleRow) hifzMaskToggleRow.style.display = 'block';
+      if (hifzMaskToggleBtn) {
+        hifzMaskToggleBtn.dataset.allRevealed = 'false';
+        const label = hifzMaskToggleBtn.querySelector('span');
+        if (label) label.textContent = 'Masquer tout';
+      }
+      hifzCardPlaceholder.style.display = 'none';
+      hifzCardArabic.style.display = 'block';
+      hifzCardArabic.innerHTML = tokenizeHifzArabicWords(verse.textAr);
+      hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
+    } else { // test — identical to the flashcard's original single-phase reset
+      if (hifzCardHintsBlock) hifzCardHintsBlock.style.display = 'flex';
+      if (hifzHintsToggleRow) hifzHintsToggleRow.style.display = 'none';
+      if (hifzMaskToggleRow) hifzMaskToggleRow.style.display = 'none';
+      hifzCardPlaceholder.style.display = 'block';
+      hifzCardPlaceholder.textContent = 'Enregistrez votre voix pour valider...';
+      hifzCardPlaceholder.style.color = '';
+      hifzCardPlaceholder.style.fontStyle = '';
+      hifzCardArabic.style.display = 'none';
+      hifzCardArabic.textContent = verse.textAr;
+      hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
+      hifzCardSrsRow.style.display = 'none';
+      if (hifzFallbackRow) hifzFallbackRow.style.display = 'none';
+      hifzCardMicBtn.className = '';
+      hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
+      hifzCardRecordingStatus.style.color = 'rgba(255,255,255,0.75)';
+    }
+  }
+
   // Open Flashcard modal for target verse. refLabel is shown in the header;
   // juzNum must be the verse's actual Juz (not necessarily state.selectedJuz —
   // a review session can walk verses across several Juz).
@@ -1428,6 +1659,9 @@ document.addEventListener('DOMContentLoaded', () => {
     state.activeHifzSurah = surah;
     state.activeHifzJuz = juzNum;
     state.audioPlayCount = 1;
+
+    const verseKey = `juz_${juzNum}_surah_${surah.number}_verse_${verse.numberInSurah}`;
+    state.hifzCardPhase = determineHifzCardPhase(verseKey);
 
     hifzCardRef.textContent = refLabel || `Sourate ${surah.number}:${verse.numberInSurah}`;
 
@@ -1443,19 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hifzCardTranslation.textContent = `"${verse.translation}"`;
     hifzCardTranslit.textContent = verse.transliteration;
 
-    hifzCardPlaceholder.style.display = 'block';
-    hifzCardPlaceholder.textContent = 'Enregistrez votre voix pour valider...';
-    hifzCardPlaceholder.style.color = '';
-    hifzCardPlaceholder.style.fontStyle = '';
-    hifzCardArabic.style.display = 'none';
-    hifzCardArabic.textContent = verse.textAr;
-    hifzCardArabicWrapper.className = 'hifz-card-arabic-wrapper';
-
-    hifzCardSrsRow.style.display = 'none';
-    if (hifzFallbackRow) hifzFallbackRow.style.display = 'none';
-    hifzCardMicBtn.className = '';
-    hifzCardRecordingStatus.textContent = 'Cliquez pour réciter';
-    hifzCardRecordingStatus.style.color = 'rgba(255,255,255,0.75)';
+    renderHifzCardPhase();
 
     if (hifzFlashcardModal && drawerOverlay) {
       hifzFlashcardModal.classList.add('open');
@@ -1465,6 +1687,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function closeHifzFlashcard() {
     cancelHifzSpeechRecording();
+    if (hifzCardAudio) {
+      hifzCardAudio.pause();
+      hifzCardAudio.currentTime = 0;
+    }
 
     if (hifzFlashcardModal && drawerOverlay) {
       hifzFlashcardModal.classList.remove('open');
@@ -1635,6 +1861,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateProgress(null, true); // also re-renders the heatmap internally
       renderDashboardStats();
       checkInitialReadingPosition();
+      updateSRSDashboardCard();
     }
 
     const mainEl = document.querySelector('main');
@@ -2626,6 +2853,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize UI & load data
   initSelectors();
+  populateHifzJuzSelect();
   calculateWirdPlanTotal();
   refreshPrayerCardPages();
   initHeatmapHistory();
