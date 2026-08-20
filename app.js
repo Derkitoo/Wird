@@ -74,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
     audioLoopRepetitions: '1', // '1', '3', '5', 'infinite'
     audioPlayCount: 1,
     readerMode: 'read', // 'read' or 'memorize' (used in Reader view only)
-    readerImmersive: false, // true = chrome (top bar, pagination, bottom nav) hidden, page alone
     missedWirdJuz: null, // Juz number left incomplete on a previous day, or null
     khatmGoal: null, // { multiplier, days, startDate, juzCompleted } or null
     totalPagesReadAllTime: 0, // cumulative, never resets (unlike readPages)
@@ -144,9 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const quranContainer = document.getElementById('quran-page');
   const readerSurahTitle = document.getElementById('reader-surah-title');
   const readerJuzTitle = document.getElementById('reader-juz-title');
-  const readerControlsTop = document.querySelector('.reader-controls-top');
-  const readerPagePagination = document.getElementById('reader-page-pagination');
-  const bottomNavEl = document.querySelector('.bottom-nav');
 
   // SRS Dashboard card
   const srsRevisionsCard = document.getElementById('srs-revisions-card');
@@ -550,19 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
           goToPrevPage();
         }
       }, { passive: true });
-
-      // Tapping the page (including a verse's own text — it has no tap
-      // action of its own in Lecture mode) toggles fullscreen immersive
-      // mode: one tap hides everything but the page itself, another tap
-      // brings back the top bar, pagination, bottom nav and the options
-      // panel together — and the floating audio bar (if a verse is
-      // playing) follows suit. Only the ayah-end marker (tafsir) and
-      // Mémoriser mode's per-verse buttons keep their own tap action.
-      pageEl.addEventListener('click', (e) => {
-        const isInteractive = e.target.closest('.ayah-marker');
-        if (isInteractive) return;
-        toggleReaderImmersive();
-      });
     }
   }
 
@@ -847,32 +830,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // startsWith() below silently fails even though the text is identical.
   const BISMILLAH_AR = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'.normalize('NFC');
 
-  // Fullscreen immersive toggle: hides/shows the reader's top bar,
-  // pagination and bottom nav together — a single tap on the page cycles
-  // between "just the page" and "everything" (see the #quran-page click
-  // listener above).
-  function toggleReaderImmersive(forceState) {
-    const nextImmersive = typeof forceState === 'boolean' ? forceState : !state.readerImmersive;
-    state.readerImmersive = nextImmersive;
-
-    if (readerControlsTop) readerControlsTop.style.display = nextImmersive ? 'none' : 'flex';
-    if (readerPagePagination) readerPagePagination.style.display = nextImmersive ? 'none' : 'flex';
-    if (bottomNavEl) bottomNavEl.style.display = nextImmersive ? 'none' : 'flex';
-
-    // main's bottom padding permanently reserves room for the floating nav
-    // (see .bottom-nav in style.css); with the nav hidden in immersive mode
-    // that padding is just unused scrollable space past the fitted page —
-    // a few tens of pixels the user can drag into for no reason, which
-    // defeats the point of "no scrolling, just the page". Drop it while
-    // immersive, restore it otherwise.
-    const mainEl = document.querySelector('main');
-    if (mainEl) mainEl.style.paddingBottom = nextImmersive ? '20px' : '';
-
-    // Chrome height changed either way, so the page needs to be re-measured
-    // and re-fit to however much room is left now.
-    fitReaderPageToViewport();
-  }
-
   // Shrinks the current Lecture-mode page's Arabic flow (if needed) so the
   // whole page fits without scrolling, instead of forcing one fixed size
   // that's sometimes too tall for a dense page. Safe to do per-page (unlike
@@ -894,13 +851,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Measured to the nav's own top edge (not just its height) so this stays
     // correct regardless of how it's positioned — e.g. the floating pill nav
     // sits above the viewport bottom with its own margin/safe-area offset,
-    // which a plain height subtraction wouldn't account for. A display:none
-    // nav (immersive mode) reports a zero-everything rect though, including
-    // top:0 — using that directly collapses "available" to a huge negative
-    // number and silently aborts all fitting, which is exactly backwards
-    // for immersive mode (no nav in the way = *more* room, not none). Fall
-    // back to the viewport's own bottom edge whenever the nav isn't actually
-    // occupying space.
+    // which a plain height subtraction wouldn't account for. Fall back to
+    // the viewport's own bottom edge if the nav isn't actually occupying
+    // space (e.g. not yet rendered).
     const navRect = bottomNav ? bottomNav.getBoundingClientRect() : null;
     const navTop = (navRect && navRect.height > 0) ? navRect.top : window.innerHeight;
     const paginationHeight = pagination ? pagination.getBoundingClientRect().height : 0;
@@ -1096,11 +1049,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetParent = document.getElementById('quran-page') || quranContainer;
     if (!targetParent) return;
 
-    // Read-mode dense Mushaf page: tapping a verse's Arabic text no longer
-    // does anything of its own (it used to play audio, then later opened an
-    // Écouter/Tafsir popover) — it now just falls through to the page's own
-    // tap handler like tapping anywhere else (toggles immersive mode). The
-    // small ayah-end marker is still the way to open tafsir.
+    // Read-mode dense Mushaf page: tapping a verse's Arabic text does
+    // nothing on its own. The small ayah-end marker is the only way to
+    // open tafsir.
     targetParent.querySelectorAll('.ayah-marker').forEach(marker => {
       marker.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1642,12 +1593,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (viewId !== 'reader') cancelPageDwellTracking();
-
-    // Every view starts with the chrome visible — only the reader's own tap
-    // gesture is allowed to hide the bottom nav, and it should never carry
-    // over into a different view (e.g. if the user somehow leaves the reader
-    // while immersive without tapping the page again first).
-    if (state.readerImmersive) toggleReaderImmersive(false);
 
     // Hide all view panels safely
     document.querySelectorAll('.view').forEach(el => {
