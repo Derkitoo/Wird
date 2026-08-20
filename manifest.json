@@ -4,8 +4,8 @@
   "description": "Une application moderne pour lire, comprendre et mémoriser le Coran au quotidien.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#070913",
-  "theme_color": "#070913",
+  "background_color": "#E8DACB",
+  "theme_color": "#E8DACB",
   "orientation": "portrait",
   "icons": [
     {

@@ -2720,7 +2720,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnThemeSepia = document.getElementById('btn-theme-sepia');
   const paletteSwatches = document.querySelectorAll('.palette-swatch');
 
-  state.theme = localStorage.getItem('wird_theme') || 'dark';
+  state.theme = localStorage.getItem('wird_theme') || 'sepia';
   state.palette = localStorage.getItem('wird_palette') || 'gold';
 
   function applyTheme() {
